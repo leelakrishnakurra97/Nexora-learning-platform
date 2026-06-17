@@ -102,7 +102,7 @@ export const DemoPanel: React.FC = () => {
       }
     } catch (err: any) {
       console.error(err);
-      addNotification("Simulation Error", `Could not simulate ${role} login. Make sure servers are running.`, "error");
+      addNotification("Simulation Error", `Could not simulate ${role} login. Make sure servers are running.`, "alert");
     } finally {
       setLoadingRole(null);
     }
@@ -125,7 +125,7 @@ export const DemoPanel: React.FC = () => {
       addNotification(
         "🔥 Streak Warning",
         "Your 9-day study streak will expire in 2 hours. Complete a topic now to keep it active!",
-        "warning"
+        "alert"
       );
     }
   };

@@ -19,6 +19,7 @@ import { RoomContainer } from "./components/LiveClass/RoomContainer";
 import { NotesResourcesPage } from "./components/NotesResourcesPage";
 import { ParentPortal } from "./components/ParentPortal";
 import { DemoPanel } from "./components/DemoPanel";
+import { GetCredentialsPage } from "./components/GetCredentialsPage";
 
 function RoomJoinFallback() {
   const { setView, joinLiveRoom, profile } = useLmsStore();
@@ -291,7 +292,8 @@ function App() {
   // Sync URL hash with the store's activeView to support browser back/forward buttons
   useEffect(() => {
     const handleHashChange = () => {
-      const hash = window.location.hash.replace(/^#\/?/, "");
+      const hashWithQuery = window.location.hash.replace(/^#\/?/, "");
+      const hash = hashWithQuery.split("?")[0];
       const currentActiveView = useLmsStore.getState().activeView;
       if (hash && currentActiveView !== hash) {
         setView(hash);
@@ -303,7 +305,8 @@ function App() {
     window.addEventListener("hashchange", handleHashChange);
 
     // Sync on initial load
-    const initialHash = window.location.hash.replace(/^#\/?/, "");
+    const initialHashWithQuery = window.location.hash.replace(/^#\/?/, "");
+    const initialHash = initialHashWithQuery.split("?")[0];
     const currentActiveView = useLmsStore.getState().activeView;
     if (initialHash && currentActiveView !== initialHash) {
       setView(initialHash);
@@ -318,7 +321,8 @@ function App() {
 
   // Sync window.location.hash when store state updates
   useEffect(() => {
-    const currentHash = window.location.hash.replace(/^#\/?/, "");
+    const currentHashWithQuery = window.location.hash.replace(/^#\/?/, "");
+    const currentHash = currentHashWithQuery.split("?")[0];
     if (currentHash !== activeView) {
       window.location.hash = "/" + activeView;
     }
@@ -364,7 +368,8 @@ function App() {
     activeView === "login" ||
     activeView === "signup" ||
     activeView === "ai-tutor" ||
-    activeView === "quiz-view";
+    activeView === "quiz-view" ||
+    activeView === "get-credentials";
 
   return (
     <div
@@ -378,6 +383,7 @@ function App() {
           {activeView === "signup" && <SignupPage />}
           {activeView === "ai-tutor" && <AITutor />}
           {activeView === "quiz-view" && <QuizInterface />}
+          {activeView === "get-credentials" && <GetCredentialsPage />}
         </>
       ) : (
         // Dashboard Shell structure

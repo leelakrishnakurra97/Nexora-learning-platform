@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { mapQuizForFrontend } from '../lib/mappers.js';
 import { requireAuth } from '../middleware/auth.js';
+import fs from 'fs';
+import path from 'path';
 
 const router = Router();
 
@@ -24,225 +26,216 @@ router.get('/quizzes/:quizId', async (req, res) => {
 
   res.json(mapQuizForFrontend(quiz));
 });
-function getQuestionsForTopic(subjectName: string, chapterName: string, topicName: string) {
-  const cleanSub = subjectName.toLowerCase();
-  const cleanChap = chapterName.toLowerCase();
-  const cleanTop = topicName.toLowerCase();
+function getCategoryKey(subjectName: string, chapterName: string, topicName: string): string {
+  const cleanSubject = subjectName.toLowerCase();
+  const cleanChapter = chapterName.toLowerCase();
+  const cleanTopic = topicName.toLowerCase();
 
-  if (cleanSub.includes("math") || cleanChap.includes("matrices") || cleanTop.includes("matrix") || cleanTop.includes("determinant") || cleanTop.includes("sets") || cleanChap.includes("sets")) {
-    return [
-      {
-        question: "What is the determinant of a 2x2 identity matrix?",
-        options: ["1", "0", "-1", "2"],
-        correctAnswerIndex: 0,
-      },
-      {
-        question: "If det(A) = 0, the matrix A is defined as:",
-        options: ["Singular", "Non-singular", "Invertible", "Symmetric"],
-        correctAnswerIndex: 0,
-      },
-      {
-        question: "For a square matrix A, which operation yields the identity matrix?",
-        options: ["A * A⁻¹", "A + A", "A - A", "A * A"],
-        correctAnswerIndex: 0,
-      },
-      {
-        question: "What is the transpose of a symmetric matrix A?",
-        options: ["A", "-A", "A⁻¹", "Aᵀ"],
-        correctAnswerIndex: 0,
-      },
-      {
-        question: "If set A has n elements, how many subsets does its power set contain?",
-        options: ["2ⁿ", "n²", "2n", "n!"],
-        correctAnswerIndex: 0,
-      },
-      {
-        question: "Which of the following describes the intersection A ∩ B = Ø?",
-        options: ["Disjoint sets", "Equal sets", "Subsets", "Universal sets"],
-        correctAnswerIndex: 0,
-      },
-      {
-        question: "What is the Cartesian product A × B for A={1,2} and B={3}?",
-        options: ["{(1,3), (2,3)}", "{(3,1), (3,2)}", "{1, 2, 3}", "{}"],
-        correctAnswerIndex: 0,
-      },
-      {
-        question: "If a matrix has 12 elements, how many possible orders can it have?",
-        options: ["6", "12", "4", "3"],
-        correctAnswerIndex: 0,
-      },
-      {
-        question: "A matrix in which all elements above or below the main diagonal are zero is called:",
-        options: ["Diagonal matrix", "Row matrix", "Column matrix", "Scalar matrix"],
-        correctAnswerIndex: 0,
-      },
-      {
-        question: "If A and B are square matrices of the same order, then (AB)⁻¹ is equal to:",
-        options: ["B⁻¹A⁻¹", "A⁻¹B⁻¹", "AB", "BA"],
-        correctAnswerIndex: 0,
+  if (cleanSubject.includes("math")) {
+    if (
+      cleanChapter.includes("set") ||
+      cleanChapter.includes("relation") ||
+      cleanChapter.includes("function") ||
+      cleanTopic.includes("set") ||
+      cleanTopic.includes("relation") ||
+      cleanTopic.includes("function")
+    ) {
+      return "math-sets";
+    }
+    if (
+      cleanChapter.includes("complex") ||
+      cleanTopic.includes("complex")
+    ) {
+      return "math-complex";
+    }
+    if (
+      cleanChapter.includes("matrix") ||
+      cleanChapter.includes("determinant") ||
+      cleanTopic.includes("matrix") ||
+      cleanTopic.includes("determinant")
+    ) {
+      return "math-matrix";
+    }
+    if (
+      cleanChapter.includes("ordinary differential") ||
+      cleanTopic.includes("ordinary differential") ||
+      cleanChapter.includes("differential equation") ||
+      cleanTopic.includes("differential equation")
+    ) {
+      return "math-equations";
+    }
+    if (
+      cleanChapter.includes("equation") ||
+      cleanTopic.includes("equation") ||
+      cleanChapter.includes("algebra") ||
+      cleanTopic.includes("algebra")
+    ) {
+      if (cleanChapter.includes("basic") || cleanTopic.includes("real")) {
+        return "math-numbers";
       }
-    ];
+      return "math-algebra";
+    }
+    if (
+      cleanChapter.includes("geometry") ||
+      cleanChapter.includes("vector") ||
+      cleanChapter.includes("locus") ||
+      cleanChapter.includes("conic") ||
+      cleanChapter.includes("line") ||
+      cleanTopic.includes("geometry") ||
+      cleanTopic.includes("vector") ||
+      cleanTopic.includes("locus") ||
+      cleanTopic.includes("conic") ||
+      cleanTopic.includes("line")
+    ) {
+      return "math-geometry";
+    }
+    if (
+      cleanChapter.includes("trig") ||
+      cleanTopic.includes("trig")
+    ) {
+      return "math-trig";
+    }
+    if (
+      cleanChapter.includes("calculus") ||
+      cleanChapter.includes("limit") ||
+      cleanChapter.includes("diff") ||
+      cleanTopic.includes("calculus") ||
+      cleanTopic.includes("limit") ||
+      cleanTopic.includes("diff")
+    ) {
+      return "math-calculus";
+    }
+    if (
+      cleanChapter.includes("combinat") ||
+      cleanChapter.includes("induction") ||
+      cleanChapter.includes("count") ||
+      cleanTopic.includes("combinat") ||
+      cleanTopic.includes("induction") ||
+      cleanTopic.includes("count")
+    ) {
+      return "math-combinatorics";
+    }
+    if (
+      cleanChapter.includes("stat") ||
+      cleanChapter.includes("prob") ||
+      cleanChapter.includes("mensur") ||
+      cleanTopic.includes("stat") ||
+      cleanTopic.includes("prob") ||
+      cleanTopic.includes("mensur")
+    ) {
+      return "math-stats";
+    }
+    return "math-numbers";
   }
 
-  if (cleanSub.includes("phys") || cleanChap.includes("motion") || cleanTop.includes("force") || cleanChap.includes("electrostatics") || cleanTop.includes("field")) {
-    return [
-      {
-        question: "Which law is known as the Law of Inertia?",
-        options: ["Newton's First Law", "Newton's Second Law", "Newton's Third Law", "Law of Gravitation"],
-        correctAnswerIndex: 0,
-      },
-      {
-        question: "What is the formula for force according to Newton's Second Law?",
-        options: ["F = ma", "F = m/a", "F = mv", "F = m + a"],
-        correctAnswerIndex: 0,
-      },
-      {
-        question: "If an object is thrown vertically upwards, what is its velocity at its maximum height?",
-        options: ["Zero", "9.8 m/s", "Equal to initial velocity", "None of these"],
-        correctAnswerIndex: 0,
-      },
-      {
-        question: "What is the SI unit of electric charge?",
-        options: ["Coulomb", "Ampere", "Volt", "Ohm"],
-        correctAnswerIndex: 0,
-      },
-      {
-        question: "What is the value of permittivity of free space (ε₀)?",
-        options: ["8.85 x 10⁻¹² F/m", "9 x 10⁹ N m²/C²", "1.6 x 10⁻¹⁹ C", "8.85 x 10⁹ F/m"],
-        correctAnswerIndex: 0,
-      },
-      {
-        question: "The electric field inside a perfectly conducting sphere is:",
-        options: ["Zero", "Constant", "Infinite", "Variable"],
-        correctAnswerIndex: 0,
-      },
-      {
-        question: "What is the unit of capacitance?",
-        options: ["Farad", "Henry", "Tesla", "Weber"],
-        correctAnswerIndex: 0,
-      },
-      {
-        question: "According to Coulomb's Law, force is inversely proportional to:",
-        options: ["Square of distance", "Distance", "Product of charges", "Permittivity"],
-        correctAnswerIndex: 0,
-      },
-      {
-        question: "What is the electric potential at an infinite distance from a point charge?",
-        options: ["Zero", "Infinite", "Constant", "Undefined"],
-        correctAnswerIndex: 0,
-      },
-      {
-        question: "Which device is used to store electric charge and electrical energy?",
-        options: ["Capacitor", "Resistor", "Inductor", "Diode"],
-        correctAnswerIndex: 0,
-      }
-    ];
+  const isPhysics = cleanSubject.includes("physics") || cleanChapter.includes("physics") || cleanTopic.includes("physics") || cleanChapter.includes("phys") || cleanTopic.includes("phys");
+  const isChemistry = cleanSubject.includes("chemistry") || cleanSubject.includes("chem") || cleanChapter.includes("chemistry") || cleanTopic.includes("chemistry") || cleanChapter.includes("chem") || cleanTopic.includes("chem");
+  const isBiology = cleanSubject.includes("biology") || cleanSubject.includes("bio") || cleanChapter.includes("biology") || cleanTopic.includes("biology") || cleanChapter.includes("bio") || cleanTopic.includes("bio");
+
+  if (isPhysics || cleanChapter.includes("electro") || cleanChapter.includes("electri") || cleanChapter.includes("magnet") || cleanChapter.includes("induction") || cleanTopic.includes("electro") || cleanTopic.includes("electri") || cleanTopic.includes("magnet") || cleanTopic.includes("induction")) {
+    if (cleanChapter.includes("electro") || cleanChapter.includes("electri") || cleanChapter.includes("magnet") || cleanTopic.includes("electro") || cleanTopic.includes("electri") || cleanTopic.includes("magnet")) {
+      return "science-physics-electro";
+    }
+    if (cleanChapter.includes("optic") || cleanChapter.includes("acoust") || cleanChapter.includes("sound") || cleanChapter.includes("wave") || cleanTopic.includes("optic") || cleanTopic.includes("acoust") || cleanTopic.includes("sound") || cleanTopic.includes("wave")) {
+      return "science-physics-optics";
+    }
+    return "science-physics-motion";
   }
 
-  if (cleanSub.includes("chem") || cleanChap.includes("matter") || cleanTop.includes("bonding") || cleanTop.includes("metallurgy") || cleanTop.includes("kinetics") || cleanTop.includes("equilibrium")) {
-    return [
-      {
-        question: "Which concentration method is typically used for sulphide ores?",
-        options: ["Froth Flotation", "Hydraulic Washing", "Magnetic Separation", "Leaching"],
-        correctAnswerIndex: 0,
-      },
-      {
-        question: "Which chemical bond involves the sharing of electron pairs between atoms?",
-        options: ["Covalent bond", "Ionic bond", "Metallic bond", "Hydrogen bond"],
-        correctAnswerIndex: 0,
-      },
-      {
-        question: "What is the main component of slag in iron extraction?",
-        options: ["CaSiO₃", "FeSiO₃", "SiO₂", "CaO"],
-        correctAnswerIndex: 0,
-      },
-      {
-        question: "The heating of ore below its melting point in the presence of excess air is:",
-        options: ["Roasting", "Calcination", "Smelting", "Refining"],
-        correctAnswerIndex: 0,
-      },
-      {
-        question: "Which of the following is an amphoteric oxide?",
-        options: ["Al₂O₃", "Na₂O", "SO₂", "CO₂"],
-        correctAnswerIndex: 0,
-      },
-      {
-        question: "The valence shell configuration of Group 15 elements is:",
-        options: ["ns² np³", "ns² np²", "ns² np⁴", "ns² np⁵"],
-        correctAnswerIndex: 0,
-      },
-      {
-        question: "Which method is used for refining volatile metals like Zinc and Mercury?",
-        options: ["Distillation", "Liquation", "Electrolysis", "Zone refining"],
-        correctAnswerIndex: 0,
-      },
-      {
-        question: "What is the coordination number of atoms in a body-centered cubic (BCC) lattice?",
-        options: ["8", "6", "12", "4"],
-        correctAnswerIndex: 0,
-      },
-      {
-        question: "An example of a stoichiometric crystal defect is:",
-        options: ["Schottky defect", "Metal excess defect", "Impurity defect", "Non-stoichiometric defect"],
-        correctAnswerIndex: 0,
-      },
-      {
-        question: "What is the order of reaction if the unit of rate constant is L mol⁻¹ s⁻¹?",
-        options: ["Second order", "First order", "Zero order", "Third order"],
-        correctAnswerIndex: 0,
-      }
-    ];
+  if (isChemistry || cleanChapter.includes("metall") || cleanTopic.includes("metall")) {
+    if (cleanChapter.includes("metall") || cleanTopic.includes("metall")) {
+      return "science-chemistry-metallurgy";
+    }
+    if (cleanChapter.includes("organic") || cleanChapter.includes("carbon") || cleanChapter.includes("biomolec") || cleanTopic.includes("organic") || cleanTopic.includes("carbon") || cleanTopic.includes("biomolec")) {
+      return "science-chemistry-organic";
+    }
+    if (cleanChapter.includes("reaction") || cleanChapter.includes("acid") || cleanChapter.includes("base") || cleanChapter.includes("salt") || cleanChapter.includes("equilibrium") || cleanChapter.includes("electrochem") || cleanTopic.includes("reaction") || cleanTopic.includes("acid") || cleanTopic.includes("base") || cleanTopic.includes("salt") || cleanTopic.includes("equilibrium") || cleanTopic.includes("electrochem")) {
+      return "science-chemistry-physical";
+    }
+    return "science-chemistry-bonding";
   }
 
+  if (isBiology) {
+    if (cleanChapter.includes("cell") || cleanChapter.includes("tissu") || cleanChapter.includes("morphol") || cleanTopic.includes("cell") || cleanTopic.includes("tissu") || cleanTopic.includes("morphol")) {
+      return "science-biology-cell";
+    }
+    if (cleanChapter.includes("health") || cleanChapter.includes("ill") || cleanChapter.includes("disease") || cleanTopic.includes("health") || cleanTopic.includes("ill") || cleanTopic.includes("disease")) {
+      return "science-biology-health";
+    }
+    if (cleanChapter.includes("ecolog") || cleanChapter.includes("environ") || cleanChapter.includes("resource") || cleanChapter.includes("divers") || cleanTopic.includes("ecolog") || cleanTopic.includes("environ") || cleanTopic.includes("resource") || cleanTopic.includes("divers")) {
+      return "science-biology-ecology";
+    }
+    return "science-biology-genetics";
+  }
+
+  return "science-physics-motion";
+}
+
+function getQuestionsForTopic(subjectName: string, chapterName: string, topicName: string, topicId?: string) {
+  try {
+    const questionsPath = path.join(process.cwd(), 'server', 'data', 'question-bank.json');
+    if (fs.existsSync(questionsPath)) {
+      const fileContent = fs.readFileSync(questionsPath, 'utf-8');
+      const db = JSON.parse(fileContent);
+      const catKey = getCategoryKey(subjectName, chapterName, topicName);
+      if (db[catKey] && Array.isArray(db[catKey]) && db[catKey].length === 10) {
+        return db[catKey];
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load questions from question-bank.json:', err);
+  }
+
+  // Fallback to legacy hardcoded matrices list if file reading fails
   return [
     {
-      question: `What is the primary study focus of ${topicName}?`,
-      options: ["Systematic analysis of core concepts and principles", "Memorizing definitions without understanding", "Ignoring experimental proofs", "Skipping problem-solving sets"],
+      question: "What is the determinant of a 2x2 identity matrix?",
+      options: ["1", "0", "-1", "2"],
       correctAnswerIndex: 0,
     },
     {
-      question: `How are formulas and equations verified in the study of ${topicName}?`,
-      options: ["Through empirical verification and deductive proofs", "By general consensus without checking", "By assuming they are always false", "None of the above"],
+      question: "If det(A) = 0, the matrix A is defined as:",
+      options: ["Singular", "Non-singular", "Invertible", "Symmetric"],
       correctAnswerIndex: 0,
     },
     {
-      question: `Which strategy is most effective for learning ${topicName}?`,
-      options: ["Breaking down the syllabus into structured sub-topics", "Memorizing entire textbook chapters overnight", "Avoiding practice tests", "Skipping mock worksheets"],
+      question: "For a square matrix A, which operation yields the identity matrix?",
+      options: ["A * A⁻¹", "A + A", "A - A", "A * A"],
       correctAnswerIndex: 0,
     },
     {
-      question: "What is the standard approach to solving complex problems here?",
-      options: ["Analyzing boundary conditions and breaking down equations", "Guessing the final answer", "Copying from other sheets", "Ignoring the question text"],
+      question: "What is the transpose of a symmetric matrix A?",
+      options: ["A", "-A", "A⁻¹", "Aᵀ"],
       correctAnswerIndex: 0,
     },
     {
-      question: "How does conceptual clarity help in practical applications?",
-      options: ["It forms the foundation for advanced problem-solving", "It has no impact on practical work", "It is only needed for passing exams", "It replaces the need for practice"],
+      question: "If set A has n elements, how many subsets does its power set contain?",
+      options: ["2ⁿ", "n²", "2n", "n!"],
       correctAnswerIndex: 0,
     },
     {
-      question: "What is the importance of reviewing weak sub-topics?",
-      options: ["It patches knowledge gaps and builds confidence", "It is a waste of study time", "It should only be done after failing", "It has no correlation with scores"],
+      question: "Which of the following describes the intersection A ∩ B = Ø?",
+      options: ["Disjoint sets", "Equal sets", "Subsets", "Universal sets"],
       correctAnswerIndex: 0,
     },
     {
-      question: "Why is self-assessment critical for academic growth?",
-      options: ["It highlights areas of improvement and tracks progress", "It is only for teachers' convenience", "It has no scientific basis", "It guarantees absolute marks"],
+      question: "What is the Cartesian product A × B for A={1,2} and B={3}?",
+      options: ["{(1,3), (2,3)}", "{(3,1), (3,2)}", "{1, 2, 3}", "{}"],
       correctAnswerIndex: 0,
     },
     {
-      question: "What role does regular practice play in retaining concepts?",
-      options: ["It strengthens memory retrieval and application skills", "It is secondary to memorization", "It has no relationship with retention", "It causes premature fatigue"],
+      question: "If a matrix has 12 elements, how many possible orders can it have?",
+      options: ["6", "12", "4", "3"],
       correctAnswerIndex: 0,
     },
     {
-      question: "How can graphical representations clarify text descriptions?",
-      options: ["By visualizing relationships between variables dynamically", "By adding unnecessary visual clutter", "By replacing the equations completely", "By complicating simple definitions"],
+      question: "A matrix in which all elements above or below the main diagonal are zero is called:",
+      options: ["Diagonal matrix", "Row matrix", "Column matrix", "Scalar matrix"],
       correctAnswerIndex: 0,
     },
     {
-      question: "What is the final goal of completing structured worksheets?",
-      options: ["Achieving comprehensive subject mastery and high scores", "Completing them as quickly as possible", "Filling details without reading", "Submitting blank templates"],
+      question: "If A and B are square matrices of the same order, then (AB)⁻¹ is equal to:",
+      options: ["B⁻¹A⁻¹", "A⁻¹B⁻¹", "AB", "BA"],
       correctAnswerIndex: 0,
     }
   ];
@@ -283,7 +276,8 @@ router.get('/topics/:topicId/quizzes', async (req, res) => {
         const questionsToCreate = getQuestionsForTopic(
           topic.chapter.unit.subject.name,
           topic.chapter.name,
-          topic.name
+          topic.name,
+          topic.id
         );
 
         const newQuiz = await prisma.quiz.create({

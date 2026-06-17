@@ -156,26 +156,23 @@ router.post('/signup', async (req, res) => {
       },
     });
 
+    const activationUrl = `http://localhost:5173/#/get-credentials?email=${encodeURIComponent(email.toLowerCase())}&password=${encodeURIComponent(signupPassword)}&role=${encodeURIComponent(userRole)}`;
     const mailOptions = {
       from: '"Nexora Learning" <nexoralmslearning@gmail.com>',
       to: email.toLowerCase(),
-      subject: 'Your Nexora Learning Credentials',
+      subject: 'Activate Your Nexora Learning Portal Credentials',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 0px; background-color: #ffffff;">
           <h2 style="color: #4f46e5; text-align: center; margin-bottom: 24px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Nexora Learning Academy</h2>
           <p style="font-size: 14px; color: #334155; line-height: 1.6;">Hello ${firstName} ${lastName},</p>
-          <p style="font-size: 14px; color: #334155; line-height: 1.6;">Welcome! Your scholar account has been successfully registered. You can now log into the LMS platform using the credentials details generated below:</p>
+          <p style="font-size: 14px; color: #334155; line-height: 1.6;">Welcome! Your scholar account has been successfully registered.</p>
+          <p style="font-size: 14px; color: #334155; line-height: 1.6;">To retrieve your login email and temporary password, please activate your portal subscription. Click the button below to proceed to the secure activation page:</p>
           
-          <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #4f46e5; padding: 16px; margin: 24px 0;">
-            <p style="margin: 0 0 8px 0; font-size: 13px; color: #475569;"><strong>Academic Role:</strong> ${userRole}</p>
-            <p style="margin: 0 0 8px 0; font-size: 13px; color: #475569;"><strong>Login Email:</strong> <span style="font-family: monospace; font-size: 14px; color: #0f172a;">${email.toLowerCase()}</span></p>
-            <p style="margin: 0; font-size: 13px; color: #475569;"><strong>Temporary Password:</strong> <span style="font-family: monospace; font-size: 14px; color: #e11d48; font-weight: 700; background-color: #ffe4e6; padding: 2px 6px; border-radius: 0px;">${signupPassword}</span></p>
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${activationUrl}" style="background-color: #4f46e5; color: #ffffff; padding: 14px 28px; text-decoration: none; font-size: 14px; font-weight: bold; border-radius: 0px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);">Activate Portal & Get Credentials</a>
           </div>
           
-          <p style="font-size: 14px; color: #334155; line-height: 1.6;">Please keep this credential secure. One credential is allowed per email address.</p>
-          <div style="text-align: center; margin-top: 32px;">
-            <a href="http://localhost:5173/#/login" style="background-color: #4f46e5; color: #ffffff; padding: 12px 24px; text-decoration: none; font-size: 14px; font-weight: bold; border-radius: 0px; display: inline-block;">Go to Scholar Login</a>
-          </div>
+          <p style="font-size: 13px; color: #64748b; line-height: 1.6;">Note: For safety and privacy, portal credentials can only be accessed through an active subscription portal. Do not share your activation link with anyone.</p>
           
           <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 32px 0;" />
           <p style="font-size: 11px; color: #64748b; text-align: center; line-height: 1.5;">
