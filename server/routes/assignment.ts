@@ -95,7 +95,8 @@ router.get('/assignments', requireAuth, async (req, res) => {
             rawDeadline: rawDeadline,
             className: className,
             points: a.maxMarks,
-            status: 'Pending'
+            status: 'Pending',
+            fileUrl: a.fileUrl || undefined
           });
         } else {
           a.submissions.forEach(sub => {
@@ -125,7 +126,8 @@ router.get('/assignments', requireAuth, async (req, res) => {
               grade: grade,
               feedback: feedback,
               studentName: `${sub.student.user.firstName} ${sub.student.user.lastName}`,
-              submittedAt: sub.submittedAt ? sub.submittedAt.toISOString() : ''
+              submittedAt: sub.submittedAt ? sub.submittedAt.toISOString() : '',
+              fileUrl: a.fileUrl || undefined
             });
           });
         }
@@ -164,7 +166,8 @@ router.get('/assignments', requireAuth, async (req, res) => {
           submissionFile: submissionFile,
           grade: grade,
           feedback: feedback,
-          teacherName: teacherName
+          teacherName: teacherName,
+          fileUrl: a.fileUrl || undefined
         });
       }
     });

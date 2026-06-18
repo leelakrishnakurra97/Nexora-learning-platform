@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useLmsStore } from "../store/index";
+import { getApiBaseUrl } from "../utils/apiBase";
 import {
   FileText,
   Calendar,
@@ -184,6 +185,33 @@ export const AssignmentPage: React.FC = () => {
               </h4>
               <p>{activeAssign.description}</p>
             </div>
+
+            {/* Assignment Reference Document (If exists) */}
+            {activeAssign.fileUrl && (
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/5 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-brand-royal/10 text-brand-royal dark:text-brand-royal-300 rounded-lg">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-650 dark:text-slate-500 font-bold uppercase tracking-wider">
+                      Assignment Reference File
+                    </span>
+                    <p className="text-xs text-slate-800 dark:text-slate-200 font-semibold truncate max-w-[200px] sm:max-w-sm mt-0.5">
+                      {activeAssign.fileUrl.split('/').pop() || "assignment_reference.pdf"}
+                    </p>
+                  </div>
+                </div>
+                <a
+                  href={activeAssign.fileUrl.startsWith('http') ? activeAssign.fileUrl : `${getApiBaseUrl()}${activeAssign.fileUrl}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2.5 rounded-xl bg-brand-royal text-white hover:bg-brand-royal/90 font-bold text-xs transition-all uppercase tracking-wider flex items-center gap-1.5 shadow-md shadow-brand-royal/15"
+                >
+                  Download
+                </a>
+              </div>
+            )}
 
             {/* Submit Action or Submission Status */}
             <div className="pt-4 border-t border-slate-200 dark:border-white/5">

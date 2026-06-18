@@ -155,6 +155,7 @@ export interface Assignment {
   feedback?: string;
   studentName?: string;
   teacherName?: string;
+  fileUrl?: string;
 }
 
 export interface AuthState {
