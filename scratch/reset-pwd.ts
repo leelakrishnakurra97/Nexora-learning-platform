@@ -3,12 +3,12 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  const newHash = await bcrypt.hash('password123', 10);
-  await prisma.user.update({
-    where: { email: 'teacher@nexoralearning.com' },
-    data: { passwordHash: newHash }
+  const hash = await bcrypt.hash('password123', 10);
+  const updated = await prisma.user.update({
+    where: { email: 'leelakrishna2601@gmail.com' },
+    data: { passwordHash: hash }
   });
-  console.log("Teacher password successfully updated to a fresh hash of 'password123'.");
+  console.log("Updated teacher password to 'password123':", updated.email);
 }
 
 main().finally(() => prisma.$disconnect());

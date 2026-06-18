@@ -212,7 +212,12 @@ router.get('/live-class/mock/verify', requireAuth, async (req, res) => {
       }
     },
     include: {
-      subject: true
+      subject: true,
+      teacher: {
+        include: {
+          user: true
+        }
+      }
     }
   });
 
@@ -230,12 +235,12 @@ router.get('/live-class/mock/verify', requireAuth, async (req, res) => {
   }
 
   const room = mockRooms[roomName] || Object.values(mockRooms).find(r => r.roomName.toUpperCase() === roomName.toUpperCase());
-  const isAvailable = room && Object.values(room.participants).some(p => p.isTeacher);
+  const isAvailable = (liveClass && liveClass.status === 'LIVE') || (room && Object.values(room.participants).some(p => p.isTeacher));
 
   res.json({ 
     exists: !!isAvailable,
-    teacherName: room ? Object.values(room.participants).find(p => p.isTeacher)?.name : undefined,
-    subjectTitle: room ? room.subjectTitle : undefined
+    teacherName: room ? Object.values(room.participants).find(p => p.isTeacher)?.name : (liveClass ? `${liveClass.teacher.user.firstName} ${liveClass.teacher.user.lastName}` : undefined),
+    subjectTitle: room ? room.subjectTitle : (liveClass ? liveClass.subject.name : undefined)
   });
 });
 
@@ -459,6 +464,39 @@ router.post('/live-class/mock/leave', requireAuth, async (req, res) => {
     delete room.participants[identity];
   }
   res.json({ success: true });
+});
+
+router.post('/live-class/kick-participant', requireAuth, async (req, res) => {
+  const { room, identity } = req.body;
+  if (!room || !identity) {
+    return res.status(400).json({ error: 'room and identity are required' });
+  }
+
+  // Only teachers/hosts should be allowed to kick
+  if (req.auth!.role !== 'TEACHER' && req.auth!.role !== 'ADMIN') {
+    return res.status(403).json({ error: 'Forbidden: Only teachers can kick participants' });
+  }
+
+  try {
+    // 1. Kick from mock room if it exists
+    const mockRoom = mockRooms[room];
+    if (mockRoom && mockRoom.participants[identity]) {
+      delete mockRoom.participants[identity];
+    }
+
+    // 2. Kick from LiveKit if LiveKit server client is reachable
+    const roomService = new RoomServiceClient(livekitHost, apiKey, apiSecret);
+    try {
+      await roomService.removeParticipant(room, identity);
+    } catch (lkErr) {
+      console.warn("Failed to kick participant from LiveKit (LiveKit may be offline or room not active):", lkErr);
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Failed to kick participant:', err);
+    res.status(500).json({ error: 'Failed to kick participant' });
+  }
 });
 
 // Create/Schedule a Live Class in the Database

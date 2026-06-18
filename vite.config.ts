@@ -6,7 +6,8 @@ const pdfRedirectPlugin = () => ({
   configureServer(server) {
     server.middlewares.use((req, res, next) => {
       const url = req.url ? req.url.split('?')[0] : '';
-      if (url.endsWith('.pdf') && !url.includes('/assignment/')) {
+      const hasDownload = req.url && req.url.includes('download=true');
+      if (url.endsWith('.pdf') && !url.includes('/assignment/') && !hasDownload) {
         const secFetchDest = req.headers['sec-fetch-dest'];
         const referer = req.headers['referer'];
         

@@ -255,12 +255,23 @@ router.post('/tutor', requireAuth, async (req, res) => {
       }
     }
 
-    // If all Gemini models failed, silently fall back to smart topic response
+    // If all Gemini models failed, fall back to Pollinations AI
+    console.warn('All Gemini models failed. Falling back to Pollinations AI.');
+    const pollinationsResult = await queryPollinations();
+    if (pollinationsResult) {
+      return res.json({ answer: pollinationsResult });
+    }
+
+    // Local fallback if Pollinations is offline/throttled
     return res.json({
       answer: getSmartMockResponse(question),
     });
   } catch (error: any) {
     console.error('Error querying Gemini API:', error);
+    const pollinationsResult = await queryPollinations();
+    if (pollinationsResult) {
+      return res.json({ answer: pollinationsResult });
+    }
     return res.json({
       answer: getSmartMockResponse(question),
     });

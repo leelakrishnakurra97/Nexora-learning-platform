@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 
 export const TeacherDashboard: React.FC = () => {
-  const { assignments, gradeAssignment, setView, boards, profile } = useLmsStore();
+  const { assignments, gradeAssignment, setView, boards, profile, fetchAssignments } = useLmsStore();
   const [gradingAssignId, setGradingAssignId] = useState<string | null>(null);
   const [generatedRoomCode, setGeneratedRoomCode] = useState("");
 
@@ -27,6 +27,7 @@ export const TeacherDashboard: React.FC = () => {
 
   // Meetings schedule state initialized with mocks, updated by DB
   const [meetings, setMeetings] = useState<any[]>([]);
+  const [notesCount, setNotesCount] = useState(0);
 
   const fetchMeetings = async () => {
     const token = localStorage.getItem("auth_token");
@@ -46,9 +47,33 @@ export const TeacherDashboard: React.FC = () => {
     }
   };
 
+  const fetchNotesCount = async () => {
+    const token = localStorage.getItem("auth_token");
+    if (!token) return;
+    try {
+      const res = await fetch(`${getApiBaseUrl()}/api/upload/notes/all`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.notes) {
+          setNotesCount(data.notes.length);
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to fetch notes count:", err);
+    }
+  };
+
   useEffect(() => {
     fetchMeetings();
-    const interval = setInterval(fetchMeetings, 6000);
+    fetchNotesCount();
+    fetchAssignments();
+    const interval = setInterval(() => {
+      fetchMeetings();
+      fetchNotesCount();
+      fetchAssignments();
+    }, 6000);
     return () => clearInterval(interval);
   }, []);
 
@@ -231,40 +256,40 @@ export const TeacherDashboard: React.FC = () => {
 
   const kpis = [
     {
-      label: "Active Cohort Students",
-      value: "450",
-      subtitle: "Scholars",
-      icon: Users,
+      label: "Overall Notes Uploaded",
+      value: String(notesCount),
+      subtitle: notesCount === 1 ? "Note" : "Notes",
+      icon: BookOpen,
       color: "text-blue-400",
       bg: "bg-blue-500/10",
       border: "border-blue-500/20",
     },
     {
-      label: "Course Satisfaction",
-      value: "4.92",
-      subtitle: "out of 5.0",
-      icon: Star,
+      label: "Pending Grading Assignments",
+      value: String(submittedAssignments.length),
+      subtitle: submittedAssignments.length === 1 ? "Assignment" : "Assignments",
+      icon: FileText,
       color: "text-yellow-400",
       bg: "bg-yellow-500/10",
       border: "border-yellow-500/20",
     },
     {
-      label: "Published Content",
-      value: "78",
-      subtitle: "Hours",
-      icon: BookOpen,
+      label: "Scheduled Sessions",
+      value: String(meetings.filter((m) => m.status === "Live" || m.status === "Upcoming").length),
+      subtitle: meetings.filter((m) => m.status === "Live" || m.status === "Upcoming").length === 1 ? "Session" : "Sessions",
+      icon: Calendar,
       color: "text-violet-400",
       bg: "bg-violet-500/10",
       border: "border-violet-500/20",
     },
     {
-      label: "Pending Reviews",
-      value: String(submittedAssignments.length),
-      subtitle: submittedAssignments.length === 1 ? "Paper" : "Papers",
-      icon: FileText,
-      color: "text-amber-400",
-      bg: "bg-amber-500/10",
-      border: "border-amber-500/20",
+      label: "Graded Submissions",
+      value: String(assignments.filter((a) => a.status === "Graded").length),
+      subtitle: assignments.filter((a) => a.status === "Graded").length === 1 ? "Submission" : "Submissions",
+      icon: GraduationCap,
+      color: "text-emerald-400",
+      bg: "bg-emerald-500/10",
+      border: "border-emerald-500/20",
     },
   ];
 

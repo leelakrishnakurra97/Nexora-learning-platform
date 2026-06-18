@@ -754,11 +754,8 @@ function RoomJoinFallback() {
                           {profile?.role === "student" && m.status === "Live" && (
                             <button
                               onClick={() => {
-                                joinLiveRoom({
-                                  roomName: m.roomName,
-                                  participantName: profile.name,
-                                  isTeacher: false
-                                });
+                                joinLiveRoom(null);
+                                setCode(m.roomName);
                               }}
                               className="px-2.5 py-1 bg-brand-royal hover:bg-brand-royal/90 text-white font-extrabold text-[9px] uppercase tracking-wider transition active:scale-95 shrink-0 rounded"
                             >

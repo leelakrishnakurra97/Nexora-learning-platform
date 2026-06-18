@@ -9,7 +9,8 @@ import {
   TrackToggle,
   DisconnectButton,
   useTracks,
-  useLocalParticipant
+  useLocalParticipant,
+  useChat
 } from '@livekit/components-react';
 import { Track, DataPacket_Kind } from 'livekit-client';
 import { 
@@ -32,6 +33,16 @@ export const ZoomMeetingLayout = () => {
   const [screenShareGranted, setScreenShareGranted] = useState(false);
   const [pendingRequests, setPendingRequests] = useState<{identity: string, name: string}[]>([]);
   const [showAttendanceReport, setShowAttendanceReport] = useState(false);
+  const { chatMessages } = useChat();
+  const [lastSeenCount, setLastSeenCount] = useState(0);
+  
+  React.useEffect(() => {
+    if (showSidebar === 'chat') {
+      setLastSeenCount(chatMessages.length);
+    }
+  }, [chatMessages.length, showSidebar]);
+  
+  const unreadCount = showSidebar === 'chat' ? 0 : Math.max(0, chatMessages.length - lastSeenCount);
   
   const { profile } = useLmsStore();
   const isHost = profile.role === 'teacher';
@@ -311,9 +322,11 @@ export const ZoomMeetingLayout = () => {
 
         {/* Dynamic Sidebar */}
         <div className={`absolute top-0 right-0 h-full w-80 bg-[#1a1a1a] border-l border-white/10 transition-transform duration-300 transform ${(showSidebar && showSidebar !== 'whiteboard' && !focusMode) ? 'translate-x-0' : 'translate-x-full'}`}>
-          {showSidebar === 'chat' && (
+          {/* Chat Panel - always mounted to prevent unmounting hook state reset */}
+          <div className={`h-full w-full ${showSidebar === 'chat' ? 'block' : 'hidden'}`}>
             <MeetingChat onClose={() => setShowSidebar(null)} />
-          )}
+          </div>
+
           {showSidebar === 'participants' && (
             <div className="flex flex-col h-full bg-[#1e1e1e]">
               <div className="h-12 border-b border-white/10 flex items-center justify-between px-4 font-bold text-sm">
@@ -343,7 +356,6 @@ export const ZoomMeetingLayout = () => {
                 <div className="p-3 border-t border-white/10 flex flex-wrap gap-2 justify-center bg-[#222]">
                   <button onClick={muteAll} className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-xs font-bold text-white transition flex-1">Mute All</button>
                   <button onClick={stopVideoAll} className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-xs font-bold text-white transition flex-1">Stop Video</button>
-                  <button className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-xs font-bold text-white transition flex-1 text-center truncate">Ask Unmute</button>
                 </div>
               )}
             </div>
@@ -377,6 +389,11 @@ export const ZoomMeetingLayout = () => {
           >
             <MessageSquare className="w-5 h-5 mb-1" />
             <span className="text-[10px] font-semibold">Chat</span>
+            {unreadCount > 0 && (
+              <span className="absolute top-1.5 right-4 bg-red-500 text-white text-[9px] font-bold rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center border border-[#111] animate-pulse">
+                {unreadCount}
+              </span>
+            )}
           </button>
 
           {(!isHost && !screenShareGranted) && (
@@ -407,12 +424,7 @@ export const ZoomMeetingLayout = () => {
             <span className="text-[10px] font-semibold">Whiteboard</span>
           </button>
 
-          {isHost && (
-            <button className="zoom-btn-icon">
-              <MoreVertical className="w-5 h-5 mb-1" />
-              <span className="text-[10px] font-semibold">More</span>
-            </button>
-          )}
+          {/* More option removed as requested */}
         </div>
 
         {/* Right: Leave */}
@@ -483,7 +495,12 @@ export const ZoomMeetingLayout = () => {
                           Active
                         </td>
                         <td className="px-4 py-3.5 font-mono text-[11px]">
-                          {isTeach ? '45m' : `${Math.floor(Math.random() * 10) + 35}m`}
+                          {(() => {
+                            const joined = p.joinedAt;
+                            const durationMs = joined ? (Date.now() - new Date(joined).getTime()) : 0;
+                            const mins = Math.max(1, Math.floor(durationMs / 60000));
+                            return `${mins}m`;
+                          })()}
                         </td>
                       </tr>
                     );

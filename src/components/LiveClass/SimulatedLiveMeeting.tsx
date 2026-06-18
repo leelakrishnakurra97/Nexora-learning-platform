@@ -53,9 +53,25 @@ export const SimulatedLiveMeeting = ({
   // Sync states
   const [participants, setParticipants] = useState<MockParticipant[]>([]);
   const [chatMessages, setChatMessages] = useState<MockChatMessage[]>([]);
+  const [lastSeenCount, setLastSeenCount] = useState(0);
   const [whiteboardDataJson, setWhiteboardDataJson] = useState<string>("[]");
   const [showSidebar, setShowSidebar] = useState<"chat" | "participants" | "whiteboard" | null>(null);
   const [viewMode, setViewMode] = useState<"gallery" | "speaker">("gallery");
+
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (showSidebar === "chat") {
+      setLastSeenCount(chatMessages.length);
+    }
+  }, [chatMessages.length, showSidebar]);
+
+  const unreadCount = showSidebar === "chat" ? 0 : Math.max(0, chatMessages.length - lastSeenCount);
+
+  // Auto-scroll simulated chat to bottom
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages, showSidebar]);
 
   // Chat sending queue
   const [pendingChatMessage, setPendingChatMessage] = useState<string>("");
@@ -201,6 +217,12 @@ export const SimulatedLiveMeeting = ({
 
         // Apply host controls if they forced mute/video off
         const meOnServer = (data.participants || []).find((p: any) => p.identity === identity);
+        if (!meOnServer && !isTeacher) {
+          alert("You have been kicked from the meeting by the host.");
+          joinLiveRoom(null);
+          setView("student-dash");
+          return;
+        }
         if (meOnServer) {
           if (data.muteAllActive && !isTeacher && audioEnabled) {
             setAudioEnabled(false);
@@ -477,102 +499,101 @@ export const SimulatedLiveMeeting = ({
         </div>
 
         {/* Sidebar Chat / Participants view */}
-        {showSidebar === "chat" && (
-          <div className="absolute right-0 top-0 bottom-0 w-80 bg-[#121214] border-l border-zinc-800 flex flex-col z-30">
-            {/* Header */}
-            <div className="h-16 shrink-0 border-b border-zinc-800 flex items-center justify-between px-4 bg-[#161619]">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-zinc-900 border border-zinc-800 rounded-none flex items-center justify-center">
-                  <MessageSquare className="w-4 h-4 text-brand-royal" />
-                </div>
-                <div className="text-left">
-                  <h3 className="font-bold text-xs tracking-wider text-slate-100 uppercase">Classroom Chat</h3>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-none animate-pulse"></span>
-                    <span className="text-[10px] text-zinc-400 font-bold tracking-wider uppercase">
-                      {participants.length} Active {participants.length === 1 ? "user" : "users"}
-                    </span>
-                  </div>
+        <div className={`absolute right-0 top-0 bottom-0 w-80 bg-[#121214] border-l border-zinc-800 flex flex-col z-30 ${showSidebar === "chat" ? "block" : "hidden"}`}>
+          {/* Header */}
+          <div className="h-16 shrink-0 border-b border-zinc-800 flex items-center justify-between px-4 bg-[#161619]">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-zinc-900 border border-zinc-800 rounded-none flex items-center justify-center">
+                <MessageSquare className="w-4 h-4 text-brand-royal" />
+              </div>
+              <div className="text-left">
+                <h3 className="font-bold text-xs tracking-wider text-slate-100 uppercase">Classroom Chat</h3>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-none animate-pulse"></span>
+                  <span className="text-[10px] text-zinc-400 font-bold tracking-wider uppercase">
+                    {participants.length} Active {participants.length === 1 ? "user" : "users"}
+                  </span>
                 </div>
               </div>
-              <button 
-                onClick={() => setShowSidebar(null)}
-                className="p-1 hover:bg-zinc-800 border border-transparent hover:border-zinc-750 transition text-zinc-400 hover:text-white"
-              >
-                <X className="w-4 h-4" />
-              </button>
             </div>
+            <button 
+              onClick={() => setShowSidebar(null)}
+              className="p-1 hover:bg-zinc-800 border border-transparent hover:border-zinc-750 transition text-zinc-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
 
-            {/* Message lists */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-dark">
-              {chatMessages.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center p-6 select-none">
-                  <div className="border border-dashed border-zinc-800 p-4 bg-zinc-900/30 mb-3 rounded-none flex items-center justify-center">
-                    <MessageSquare className="w-6 h-6 text-zinc-700" />
-                  </div>
-                  <h4 className="text-[10px] font-bold tracking-widest text-slate-400 uppercase mb-1">No Messages Yet</h4>
-                  <p className="text-[10px] text-zinc-500 max-w-[150px] leading-relaxed">
-                    Discussion is active. Send a message to start!
-                  </p>
+          {/* Message lists */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-dark">
+            {chatMessages.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center p-6 select-none">
+                <div className="border border-dashed border-zinc-800 p-4 bg-zinc-900/30 mb-3 rounded-none flex items-center justify-center">
+                  <MessageSquare className="w-6 h-6 text-zinc-700" />
                 </div>
-              ) : (
-                chatMessages.map((msg, index) => {
-                  const isMe = msg.fromIdentity === identity;
-                  const isMsgTeacher = msg.fromIdentity.toLowerCase().includes("teacher");
-                  const time = new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                <h4 className="text-[10px] font-bold tracking-widest text-slate-400 uppercase mb-1">No Messages Yet</h4>
+                <p className="text-[10px] text-zinc-500 max-w-[150px] leading-relaxed">
+                  Discussion is active. Send a message to start!
+                </p>
+              </div>
+            ) : (
+              chatMessages.map((msg, index) => {
+                const isMe = msg.fromIdentity === identity;
+                const isMsgTeacher = msg.fromIdentity.toLowerCase().includes("teacher");
+                const time = new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-                  return (
-                    <div key={msg.id || index} className="group flex gap-2.5 items-start text-left">
-                      <div className={`w-7 h-7 shrink-0 flex items-center justify-center text-[10px] font-extrabold uppercase rounded-none border border-black/10 select-none ${
-                        isMsgTeacher ? "bg-emerald-600 text-white" : (isMe ? "bg-brand-royal text-white" : "bg-zinc-700 text-slate-200")
-                      }`}>
-                        {msg.fromName.substring(0, 2)}
+                return (
+                  <div key={msg.id || index} className="group flex gap-2.5 items-start text-left">
+                    <div className={`w-7 h-7 shrink-0 flex items-center justify-center text-[10px] font-extrabold uppercase rounded-none border border-black/10 select-none ${
+                      isMsgTeacher ? "bg-emerald-600 text-white" : (isMe ? "bg-brand-royal text-white" : "bg-zinc-700 text-slate-200")
+                    }`}>
+                      {msg.fromName.substring(0, 2)}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className="text-[11px] font-bold text-slate-350 truncate">{msg.fromName}</span>
+                        <span className="text-[9px] text-zinc-550">{time}</span>
                       </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 mb-0.5">
-                          <span className="text-[11px] font-bold text-slate-350 truncate">{msg.fromName}</span>
-                          <span className="text-[9px] text-zinc-550">{time}</span>
-                        </div>
-                        <div className={`p-2.5 text-[12px] break-words whitespace-pre-wrap rounded-none border border-white/[0.02] ${
-                          isMe ? "bg-brand-royal/10 border-l-2 border-brand-royal" : isMsgTeacher ? "bg-emerald-950/15 border-l-2 border-emerald-500" : "bg-[#18181b]/65 border-l-2 border-zinc-700"
-                        }`}>
-                          {msg.message}
-                        </div>
+                      <div className={`p-2.5 text-[12px] break-words whitespace-pre-wrap rounded-none border border-white/[0.02] ${
+                        isMe ? "bg-brand-royal/10 border-l-2 border-brand-royal" : isMsgTeacher ? "bg-emerald-950/15 border-l-2 border-emerald-500" : "bg-[#18181b]/65 border-l-2 border-zinc-700"
+                      }`}>
+                        {msg.message}
                       </div>
                     </div>
-                  );
-                })
-              )}
-            </div>
-
-            {/* Chat Send input Form */}
-            <form onSubmit={handleSendChat} className="p-3 bg-[#161619] border-t border-zinc-800">
-              <div className="relative border border-zinc-800 bg-[#121214] rounded-none focus-within:border-zinc-700">
-                <textarea
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendChat(e);
-                    }
-                  }}
-                  placeholder="Send class note..."
-                  className="w-full bg-transparent text-xs text-slate-200 placeholder-zinc-700 p-2.5 pb-10 resize-none focus:outline-none min-h-[45px] max-h-24 scrollbar-dark"
-                  rows={1}
-                />
-                <button
-                  type="submit"
-                  disabled={!chatInput.trim()}
-                  className="absolute right-2 bottom-2 p-1.5 bg-brand-royal hover:bg-brand-royal/90 disabled:bg-zinc-800 disabled:text-zinc-600 text-white rounded-none flex items-center justify-center border border-brand-royal/60 disabled:border-transparent transition-all"
-                >
-                  <Send className="w-3 h-3" />
-                </button>
-              </div>
-            </form>
+                  </div>
+                );
+              })
+            )}
+            <div ref={chatEndRef} />
           </div>
-        )}
+
+          {/* Chat Send input Form */}
+          <form onSubmit={handleSendChat} className="p-3 bg-[#161619] border-t border-zinc-800">
+            <div className="relative border border-zinc-800 bg-[#121214] rounded-none focus-within:border-zinc-700">
+              <textarea
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendChat(e);
+                  }
+                }}
+                placeholder="Send class note..."
+                className="w-full bg-transparent text-xs text-slate-200 placeholder-zinc-700 p-2.5 pb-10 resize-none focus:outline-none min-h-[45px] max-h-24 scrollbar-dark"
+                rows={1}
+              />
+              <button
+                type="submit"
+                disabled={!chatInput.trim()}
+                className="absolute right-2 bottom-2 p-1.5 bg-brand-royal hover:bg-brand-royal/90 disabled:bg-zinc-800 disabled:text-zinc-600 text-white rounded-none flex items-center justify-center border border-brand-royal/60 disabled:border-transparent transition-all"
+              >
+                <Send className="w-3 h-3" />
+              </button>
+            </div>
+          </form>
+        </div>
 
         {showSidebar === "participants" && (
           <div className="absolute right-0 top-0 bottom-0 w-80 bg-[#121214] border-l border-zinc-800 flex flex-col z-30 select-none">
@@ -712,6 +733,11 @@ export const SimulatedLiveMeeting = ({
             title="Classroom Chat"
           >
             <MessageSquare className="w-4.5 h-4.5" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 bg-red-500 text-white text-[9px] font-bold rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center border border-[#111] animate-pulse">
+                {unreadCount}
+              </span>
+            )}
           </button>
 
           <button 

@@ -377,11 +377,7 @@ export const StudentDashboard: React.FC = () => {
                       {calculatedStatus === "Live" ? (
                         <button
                           onClick={() => {
-                            joinLiveRoom({
-                              roomName: cls.roomName,
-                              participantName: profile.name,
-                              isTeacher: false
-                            });
+                            joinLiveRoom(null);
                             setView("webrtc-live");
                           }}
                           className="mt-4 w-full py-2 bg-brand-royal hover:bg-brand-royal/90 text-white rounded-none text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all"

@@ -79,7 +79,7 @@ export const TeacherUploadedNotesPage: React.FC = () => {
   return (
     <div className="min-h-screen space-y-8 font-sans">
       {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-royal via-brand-violet to-indigo-700 p-8 shadow-xl">
+      <div className="relative overflow-hidden rounded-2xl bg-brand-royal p-8 shadow-xl">
         <div className="absolute inset-0 opacity-10"
           style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }}
         />
@@ -184,7 +184,8 @@ export const TeacherUploadedNotesPage: React.FC = () => {
 
                 {/* Download Button */}
                 <a
-                  href={note.fileUrl}
+                  href={note.fileUrl.includes('?') ? `${note.fileUrl}&download=true` : `${note.fileUrl}?download=true`}
+                  download
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-brand-royal/10 hover:bg-brand-royal text-brand-royal hover:text-white border border-brand-royal/20 hover:border-brand-royal text-xs font-bold transition-all duration-200 group-hover:shadow-md"
