@@ -1625,7 +1625,7 @@ export const AdminPortal: React.FC = () => {
                 const sub = student.studentProfile?.subscriptions?.[0];
                 const subStatus = sub?.status || "PENDING";
                 
-                const gradeVal = student.studentProfile?.class?.title || "Class 12";
+                const gradeVal = student.studentProfile?.class?.name || "Class 12";
                 const matchesGrade = gradeFilter === "All Grades" || gradeVal === gradeFilter;
 
                 const matchesSub = subFilter === "All Subscriptions" ||
@@ -1701,7 +1701,7 @@ export const AdminPortal: React.FC = () => {
 
                               {/* Grade */}
                               <td className="py-4 px-6 text-xs text-slate-700 dark:text-slate-300 font-medium">
-                                {student.studentProfile?.class?.title || "Class 12"}
+                                {student.studentProfile?.class?.name || "Class 12"}
                               </td>
 
                               {/* State */}
@@ -2258,17 +2258,9 @@ export const AdminPortal: React.FC = () => {
 
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase">State</label>
-                <select
-                  value={activationLocation}
-                  onChange={(e) => setActivationLocation(e.target.value)}
-                  className="w-full premium-input text-xs"
-                  required
-                >
-                  <option value="">-- Select State --</option>
-                  {locationSuggestions.map((loc) => (
-                    <option key={loc} value={loc}>{loc}</option>
-                  ))}
-                </select>
+                <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-lg border border-slate-200 dark:border-white/5">
+                  {activatingStudent.location || "Not Specified"}
+                </div>
               </div>
 
               <div>
