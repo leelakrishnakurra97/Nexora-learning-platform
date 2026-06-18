@@ -258,7 +258,8 @@ export const SignupPage: React.FC = () => {
           lastName,
           role,
           boardId,
-          classId
+          classId,
+          location.trim()
         );
       } catch (signupErr) {
         console.warn("LMS server signup failed or running in offline mock mode.", signupErr);
@@ -567,7 +568,7 @@ export const SignupPage: React.FC = () => {
         <div className="text-center mt-6 pt-6 border-t border-slate-100 text-xs text-slate-600">
           Already registered?{" "}
           <button
-            onClick={() => setView("login")}
+            onClick={() => setView("login-student")}
             className="text-brand-violet font-semibold hover:underline"
           >
             Sign In

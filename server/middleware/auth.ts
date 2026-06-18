@@ -23,6 +23,7 @@ export function signToken(payload: AuthPayload) {
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) {
+    console.warn('requireAuth failed: Authorization header missing or does not start with Bearer');
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -30,7 +31,8 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
     const token = header.slice(7);
     req.auth = jwt.verify(token, JWT_SECRET) as AuthPayload;
     next();
-  } catch {
+  } catch (err: any) {
+    console.warn('requireAuth token verification failed:', err.message);
     return res.status(401).json({ error: 'Invalid token' });
   }
 }
@@ -49,9 +51,11 @@ export function optionalAuth(req: Request, _res: Response, next: NextFunction) {
 
 export function requireAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.auth) {
+    console.warn('requireAdmin failed: no req.auth');
     return res.status(401).json({ error: 'Unauthorized' });
   }
   if (req.auth.role !== 'ADMIN') {
+    console.warn(`requireAdmin failed: user role is ${req.auth.role}, not ADMIN`);
     return res.status(403).json({ error: 'Forbidden: Admin access required' });
   }
   next();

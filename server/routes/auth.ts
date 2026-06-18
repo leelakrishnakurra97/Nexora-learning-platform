@@ -87,7 +87,7 @@ router.post('/login', async (req, res) => {
 });
 
 router.post('/signup', async (req, res) => {
-  const { email, password, firstName, lastName, role, boardId, classId } = req.body as {
+  const { email, password, firstName, lastName, role, boardId, classId, location } = req.body as {
     email?: string;
     password?: string;
     firstName?: string;
@@ -95,6 +95,7 @@ router.post('/signup', async (req, res) => {
     role?: string;
     boardId?: string;
     classId?: string;
+    location?: string;
   };
 
   if (!email || !firstName || !lastName || !role) {
@@ -118,6 +119,7 @@ router.post('/signup', async (req, res) => {
         passwordHash,
         firstName,
         lastName,
+        location,
         role: userRole,
         ...(userRole === 'STUDENT' && boardId && classId
           ? {
@@ -159,13 +161,15 @@ router.post('/signup', async (req, res) => {
       },
     });
 
-    // Send credentials email but DO NOT show password in response
-    await sendCredentialsEmail(email.toLowerCase(), firstName, lastName, generatedPassword, userRole);
+    // Only send credentials email for non-student roles initially
+    if (userRole !== 'STUDENT') {
+      await sendCredentialsEmail(email.toLowerCase(), firstName, lastName, generatedPassword, userRole);
+    }
 
     // Return only success message, NO password in response
     return res.status(201).json({
       success: true,
-      message: 'Account created successfully. Check your email for credentials.',
+      message: 'Account created successfully.',
       email: email.toLowerCase(),
       role: userRole.toLowerCase(),
     });
@@ -194,43 +198,98 @@ router.post('/subscribe', async (req, res) => {
     // Find the user by email
     const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase() },
+      include: { studentProfile: true }
     });
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Only generate a new password if the user does not have a password hash yet
-    let generatedPassword = "";
-    if (!user.passwordHash || user.passwordHash.length < 10) {
-      generatedPassword = generateSecurePassword();
-      const passwordHash = await bcrypt.hash(generatedPassword, 10);
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { passwordHash },
+    if (user.role === 'STUDENT' && user.studentProfile) {
+      const studentId = user.studentProfile.id;
+
+      // Find or create default plan
+      let plan = await prisma.subscriptionPlan.findFirst({
+        where: { isActive: true }
       });
-    } else {
-      generatedPassword = "Use the temporary password sent in your registration email.";
+      if (!plan) {
+        plan = await prisma.subscriptionPlan.create({
+          data: {
+            name: 'EduVerse Premium Monthly',
+            description: 'Full access to high-end live classes, premium analytics, personalized feedback, and complete syllabus.',
+            price: 30000.00,
+            durationDays: 30,
+            billingPeriod: 'MONTHLY',
+            isActive: true,
+          }
+        });
+      }
+
+      const startDate = new Date();
+      const endDate = new Date();
+      endDate.setDate(startDate.getDate() + 30);
+
+      // Check if they already have a subscription
+      const existingSub = await prisma.subscription.findFirst({
+        where: { studentId },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      let sub;
+      if (existingSub) {
+        sub = await prisma.subscription.update({
+          where: { id: existingSub.id },
+          data: {
+            status: 'PENDING',
+            planId: plan.id,
+            updatedAt: new Date()
+          }
+        });
+      } else {
+        sub = await prisma.subscription.create({
+          data: {
+            studentId,
+            planId: plan.id,
+            status: 'PENDING',
+            startDate,
+            endDate,
+            nextBillingDate: endDate
+          }
+        });
+      }
+
+      // Check payment
+      const existingPayment = await prisma.payment.findFirst({
+        where: { subscriptionId: sub.id }
+      });
+
+      if (existingPayment) {
+        await prisma.payment.update({
+          where: { id: existingPayment.id },
+          data: {
+            status: 'PENDING',
+            amount: 30000.00
+          }
+        });
+      } else {
+        await prisma.payment.create({
+          data: {
+            subscriptionId: sub.id,
+            amount: 30000.00,
+            currency: 'INR',
+            status: 'PENDING',
+            gateway: 'RAZORPAY',
+            transactionId: 'pay_' + Math.random().toString(36).substring(2, 16)
+          }
+        });
+      }
     }
 
-    const emailSent = await sendSubscriptionConfirmationEmail(
-      email.toLowerCase(),
-      user.firstName,
-      user.lastName,
-      generatedPassword,
-      user.role,
-      subscriptionPlan || 'Full Academic Access Pass'
-    );
-
-    if (emailSent) {
-      return res.json({
-        success: true,
-        message: 'Subscription confirmed. Credentials sent to email.',
-        redirectTo: '/#/login',
-      });
-    } else {
-      return res.status(500).json({ error: 'Failed to send confirmation email' });
-    }
+    return res.json({
+      success: true,
+      message: 'Subscription request registered successfully. Awaiting administrator activation.',
+      redirectTo: '/#/login-student'
+    });
   } catch (error: any) {
     console.error('Subscription error:', error);
     return res.status(500).json({ error: error.message || 'Subscription failed' });
@@ -246,6 +305,13 @@ router.get('/users', requireAuth, requireAdmin, async (req, res) => {
           include: {
             class: true,
             board: true,
+            subscriptions: {
+              include: {
+                payments: true
+              },
+              orderBy: { createdAt: 'desc' },
+              take: 1
+            }
           }
         },
         teacherProfile: true,
@@ -403,6 +469,186 @@ router.delete('/users/:id', requireAuth, requireAdmin, async (req, res) => {
     await prisma.user.delete({ where: { id } });
     return res.json({ success: true });
   } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/users/:id/activate', requireAuth, requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { paymentStatus, password } = req.body as {
+    paymentStatus?: 'SUCCESS' | 'PENDING';
+    password?: string;
+  };
+
+  if (!password) {
+    return res.status(400).json({ error: 'Password is required' });
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id },
+      include: {
+        studentProfile: true,
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Hash the password entered by admin
+    const passwordHash = await bcrypt.hash(password, 10);
+    
+    // Update the password in database
+    await prisma.user.update({
+      where: { id },
+      data: { passwordHash },
+    });
+
+    // Update or create subscription status to ACTIVE and payment to SUCCESS
+    if (user.role === 'STUDENT') {
+      const student = await prisma.student.findUnique({
+        where: { id: user.id },
+        include: {
+          subscriptions: {
+            orderBy: { createdAt: 'desc' },
+            take: 1
+          }
+        }
+      });
+
+      if (student) {
+        let latestSub = student.subscriptions[0];
+        if (!latestSub) {
+          // If no subscription exists, find or create default plan
+          let plan = await prisma.subscriptionPlan.findFirst({
+            where: { isActive: true }
+          });
+          if (!plan) {
+            plan = await prisma.subscriptionPlan.create({
+              data: {
+                name: 'EduVerse Premium Monthly',
+                description: 'Full access to high-end live classes, premium analytics, personalized feedback, and complete syllabus.',
+                price: 30000.00,
+                durationDays: 30,
+                billingPeriod: 'MONTHLY',
+                isActive: true,
+              }
+            });
+          }
+          const startDate = new Date();
+          const endDate = new Date();
+          endDate.setDate(startDate.getDate() + 30);
+
+          latestSub = await prisma.subscription.create({
+            data: {
+              studentId: student.id,
+              planId: plan.id,
+              status: 'ACTIVE',
+              startDate: startDate,
+              endDate: endDate,
+              nextBillingDate: endDate,
+            }
+          });
+        } else {
+          // Update existing subscription to ACTIVE
+          latestSub = await prisma.subscription.update({
+            where: { id: latestSub.id },
+            data: { status: 'ACTIVE' }
+          });
+        }
+
+        // Upsert payment associated with this subscription
+        const payment = await prisma.payment.findFirst({
+          where: { subscriptionId: latestSub.id }
+        });
+
+        if (payment) {
+          await prisma.payment.update({
+            where: { id: payment.id },
+            data: {
+              status: paymentStatus || 'SUCCESS',
+              paidAt: paymentStatus === 'SUCCESS' ? new Date() : null,
+            }
+          });
+        } else {
+          await prisma.payment.create({
+            data: {
+              subscriptionId: latestSub.id,
+              amount: 30000.00,
+              currency: 'INR',
+              status: paymentStatus || 'SUCCESS',
+              gateway: 'RAZORPAY',
+              transactionId: 'pay_' + Math.random().toString(36).substring(2, 16),
+              paidAt: paymentStatus === 'SUCCESS' ? new Date() : null,
+            }
+          });
+        }
+      }
+    }
+
+    // Now send the credentials email to student!
+    await sendSubscriptionConfirmationEmail(
+      user.email,
+      user.firstName,
+      user.lastName,
+      password,
+      user.role,
+      'Full Academic Access Pass'
+    );
+
+    return res.json({ success: true, message: 'Account activated and email sent successfully.' });
+  } catch (error: any) {
+    console.error('Activation error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to activate user' });
+  }
+});
+
+router.get('/admin-analytics', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const activeSubscriptionsCount = await prisma.subscription.count({
+      where: { status: 'ACTIVE' }
+    });
+
+    // Compute monthly active subscriptions for the current year
+    const monthlyCounts = Array(12).fill(0);
+    const activeSubs = await prisma.subscription.findMany({
+      where: { status: 'ACTIVE' },
+      select: { createdAt: true }
+    });
+    for (const sub of activeSubs) {
+      const month = new Date(sub.createdAt).getMonth();
+      monthlyCounts[month]++;
+    }
+
+    // Compute regional distribution from Student User's location field
+    const users = await prisma.user.findMany({
+      where: { role: 'STUDENT' },
+      select: { location: true }
+    });
+
+    const stateCounts: { [state: string]: number } = {};
+    let totalCount = 0;
+    for (const u of users) {
+      if (u.location) {
+        const state = u.location.trim();
+        stateCounts[state] = (stateCounts[state] || 0) + 1;
+        totalCount++;
+      }
+    }
+
+    const regionalDistribution = Object.entries(stateCounts).map(([state, count]) => {
+      const percentage = totalCount > 0 ? parseFloat(((count / totalCount) * 100).toFixed(1)) : 0;
+      return { state, count, percentage: percentage + "%", students: count.toString() };
+    }).sort((a, b) => b.count - a.count);
+
+    return res.json({
+      activeSubscriptionsCount,
+      monthlyActiveSubscriptions: monthlyCounts,
+      regionalDistribution
+    });
+  } catch (error: any) {
+    console.error('Admin analytics error:', error);
     return res.status(500).json({ error: error.message });
   }
 });

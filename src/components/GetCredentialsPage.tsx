@@ -43,7 +43,7 @@ export const GetCredentialsPage: React.FC = () => {
 
       // Redirect to login page after 2 seconds
       setTimeout(() => {
-        window.location.hash = "#/login";
+        window.location.hash = "#/login-student";
       }, 2000);
     } catch (err: any) {
       console.error("Subscription error:", err);
@@ -179,7 +179,7 @@ export const GetCredentialsPage: React.FC = () => {
 
             <div className="pt-2">
               <a
-                href="#/login"
+                href="#/login-student"
                 className="inline-block premium-btn-primary px-8 py-3 font-bold text-sm flex items-center justify-center gap-2 rounded-xl shadow-md transition-all active:scale-95"
               >
                 <span>Go to Login</span>

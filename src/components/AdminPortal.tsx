@@ -23,6 +23,11 @@ import {
   File,
   Folder,
   Video,
+  ArrowLeft,
+  Pencil,
+  Search,
+  Mail,
+  Send,
 } from "lucide-react";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -91,6 +96,49 @@ export const AdminPortal: React.FC = () => {
   const [userBio, setUserBio] = useState("");
   const [userQualification, setUserQualification] = useState("");
 
+  // ── New Student Activation & Filters States ──
+  const [searchQuery, setSearchQuery] = useState("");
+  const [gradeFilter, setGradeFilter] = useState("All Grades");
+  const [statusFilter, setStatusFilter] = useState("All Status");
+  const [subFilter, setSubFilter] = useState("All Subscriptions");
+  
+  // Activation modal
+  const [isActivationModalOpen, setIsActivationModalOpen] = useState(false);
+  const [activatingStudent, setActivatingStudent] = useState<any>(null);
+  const [activationPaymentStatus, setActivationPaymentStatus] = useState<"SUCCESS" | "PENDING">("SUCCESS");
+  const [activationPassword, setActivationPassword] = useState("");
+  const [activationLoading, setActivationLoading] = useState(false);
+  const [activationError, setActivationError] = useState("");
+  
+  // Create student modal
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  // ── Analytics & Graph State ──
+  const [analyticsData, setAnalyticsData] = useState<any>({
+    activeSubscriptionsCount: 0,
+    monthlyActiveSubscriptions: Array(12).fill(0),
+    regionalDistribution: []
+  });
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+
+  const fetchAnalytics = async () => {
+    try {
+      setLoadingAnalytics(true);
+      const data = await authAPI.getAdminAnalytics();
+      setAnalyticsData(data);
+    } catch (err) {
+      console.warn("Failed to fetch admin analytics:", err);
+    } finally {
+      setLoadingAnalytics(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeView === "admin-analytics" || activeView === "admin-users" || activeView === "admin-regional-distribution") {
+      fetchAnalytics();
+    }
+  }, [activeView]);
+
   const fetchUsers = async () => {
     setLoadingUsers(true);
     setUsersError("");
@@ -101,6 +149,33 @@ export const AdminPortal: React.FC = () => {
       setUsersError("Failed to fetch users from database.");
     } finally {
       setLoadingUsers(false);
+    }
+  };
+
+  const handleActivateStudent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activatingStudent) return;
+    setActivationError("");
+    setActivationLoading(true);
+    try {
+      await authAPI.activateUser(activatingStudent.id, {
+        paymentStatus: activationPaymentStatus,
+        password: activationPassword
+      });
+      setIsActivationModalOpen(false);
+      setActivatingStudent(null);
+      setActivationPassword("");
+      useLmsStore.getState().addNotification(
+        "Student Activated",
+        `Account activated and credentials sent to ${activatingStudent.email}.`,
+        "success"
+      );
+      fetchUsers();
+      fetchAnalytics();
+    } catch (err: any) {
+      setActivationError(err.message || "Failed to activate student account.");
+    } finally {
+      setActivationLoading(false);
     }
   };
 
@@ -135,6 +210,7 @@ export const AdminPortal: React.FC = () => {
       setUserBio("");
       setUserQualification("");
       fetchUsers();
+      fetchAnalytics();
     } catch (err: any) {
       setUsersError(err.message || "Failed to create user.");
     }
@@ -167,6 +243,7 @@ export const AdminPortal: React.FC = () => {
       setUserBio("");
       setUserQualification("");
       fetchUsers();
+      fetchAnalytics();
     } catch (err: any) {
       setUsersError(err.message || "Failed to update user.");
     }
@@ -178,6 +255,7 @@ export const AdminPortal: React.FC = () => {
     try {
       await authAPI.deleteUser(id);
       fetchUsers();
+      fetchAnalytics();
     } catch (err: any) {
       setUsersError("Failed to delete user.");
     }
@@ -437,7 +515,7 @@ export const AdminPortal: React.FC = () => {
     const allViews = [
       { key: "admin-upload", label: "Contents and assignments", icon: Upload },
       { key: "admin-analytics", label: "Platform Analytics", icon: BarChart3 },
-      { key: "admin-users", label: "User Management", icon: Users },
+      { key: "admin-users", label: "Students", icon: Users },
     ] as const;
     if (profile?.role === "teacher") {
       return allViews.filter((v) => v.key === "admin-upload");
@@ -921,7 +999,7 @@ export const AdminPortal: React.FC = () => {
         <div className="space-y-6 animate-fade-in-up">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { label: "Active Subscriptions", value: "1,500 Scholars", icon: Users, color: "text-blue-500" },
+              { label: "Active Subscriptions", value: `${analyticsData.activeSubscriptionsCount || 0} Scholars`, icon: Users, color: "text-blue-500" },
               { label: "Total Platform Revenue", value: "₹4.50 Crores", icon: DollarSign, color: "text-emerald-500" },
               { label: "Server Uptime", value: "99.98%", icon: Activity, color: "text-violet-500" },
               { label: "Database Queries", value: "145k", icon: Database, color: "text-indigo-500" },
@@ -952,7 +1030,19 @@ export const AdminPortal: React.FC = () => {
               </div>
               <div className="h-44 w-full flex items-end pt-4 border-b border-slate-200 dark:border-white/5 relative">
                 <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 150">
-                  <path d="M0,150 Q50,120 100,110 T200,60 T300,50 T400,10" fill="none" stroke="url(#grad)" strokeWidth="3.5" strokeLinecap="round" />
+                  <path 
+                    d={(() => {
+                      const monthlyCounts = analyticsData.monthlyActiveSubscriptions || Array(12).fill(0);
+                      const janToJun = monthlyCounts.slice(0, 6);
+                      const maxVal = Math.max(...janToJun, 1);
+                      const points = janToJun.map((val: number, idx: number) => `${idx * 80},${135 - (val / maxVal) * 110}`);
+                      return `M ${points.join(" L ")}`;
+                    })()} 
+                    fill="none" 
+                    stroke="url(#grad)" 
+                    strokeWidth="3.5" 
+                    strokeLinecap="round" 
+                  />
                   <defs>
                     <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
                       <stop offset="0%" stopColor="#3b82f6" /><stop offset="50%" stopColor="#7c3aed" /><stop offset="100%" stopColor="#ec4899" />
@@ -965,328 +1055,545 @@ export const AdminPortal: React.FC = () => {
               </div>
             </div>
 
-            <div className="glass-card p-5 border-slate-200 dark:border-white/5 space-y-4">
-              <h4 className="text-xs font-bold text-slate-700 dark:text-slate-400 uppercase tracking-widest border-b border-slate-200 dark:border-white/5 pb-2">Regional Distribution</h4>
-              <div className="space-y-3">
-                {[{ city: "Mumbai Metro", share: "34%", students: "510" }, { city: "NCR Delhi", share: "28%", students: "420" }, { city: "Bengaluru", share: "18%", students: "270" }, { city: "Hyderabad", share: "12%", students: "180" }, { city: "Pune", share: "8%", students: "120" }].map((r, i) => (
-                  <div key={i} className="space-y-1 text-xs">
-                    <div className="flex justify-between text-[11px]">
-                      <span className="font-semibold text-slate-700 dark:text-slate-300">{r.city}</span>
-                      <span className="font-bold text-slate-900 dark:text-white font-mono">{r.share}</span>
+            <div className="glass-card p-5 border-slate-200 dark:border-white/5 space-y-4 flex flex-col justify-between">
+              <div>
+                <h4 className="text-xs font-bold text-slate-700 dark:text-slate-400 uppercase tracking-widest border-b border-slate-200 dark:border-white/5 pb-2">Regional Distribution</h4>
+                <div className="space-y-3 mt-4">
+                  {analyticsData.regionalDistribution && analyticsData.regionalDistribution.length > 0 ? (
+                    analyticsData.regionalDistribution.slice(0, 5).map((r: any, i: number) => (
+                      <div key={i} className="space-y-1 text-xs">
+                        <div className="flex justify-between text-[11px]">
+                          <span className="font-semibold text-slate-700 dark:text-slate-300">{r.state}</span>
+                          <span className="font-bold text-slate-900 dark:text-white font-mono">{r.percentage}</span>
+                        </div>
+                        <div className="w-full h-1 bg-slate-100 dark:bg-slate-950 rounded-full overflow-hidden">
+                          <div className="h-full bg-brand-violet" style={{ width: r.percentage }} />
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-10 text-xs text-slate-500">
+                      No regional registrations found in database.
                     </div>
-                    <div className="w-full h-1 bg-slate-100 dark:bg-slate-950 rounded-full overflow-hidden">
-                      <div className="h-full bg-brand-violet" style={{ width: r.share }} />
-                    </div>
-                  </div>
-                ))}
+                  )}
+                </div>
               </div>
+              <button
+                onClick={() => setView("admin-regional-distribution")}
+                className="w-full py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-xl text-[10px] font-bold text-slate-700 dark:text-slate-300 transition-colors uppercase tracking-wider active:scale-95"
+              >
+                View Detailed Breakdown
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── USER MANAGEMENT ────────────────────────────────────────────────── */}
+      {/* ── USER MANAGEMENT (STUDENTS) ────────────────────────────────────────── */}
       {activeView === "admin-users" && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up">
-          {/* Left Column: Create or Edit User Form */}
-          <div className="glass-card p-5 border-slate-200 dark:border-white/5 space-y-4 h-fit">
-            <h4 className="text-xs font-bold text-slate-700 dark:text-slate-400 uppercase tracking-widest border-b border-slate-200 dark:border-white/5 pb-2 flex items-center justify-between">
-              <span>{editingUser ? "Edit Scholar/Instructor" : "Register Scholar/Instructor"}</span>
-              {editingUser && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingUser(null);
+        <div className="space-y-6 animate-fade-in-up">
+          {/* Header row */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-brand-royal/10 dark:bg-brand-royal/20 text-brand-royal dark:text-blue-300 rounded-xl flex items-center justify-center">
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">Students Management</h2>
+                <p className="text-xs text-slate-500">CRUD operations, analytics, and reports</p>
+              </div>
+            </div>
+            
+            <button
+              onClick={() => {
+                setUserEmail("");
+                setUserPassword("");
+                setUserFirstName("");
+                setUserLastName("");
+                setUserRole("STUDENT");
+                setUserBoardId(boards[0]?.id || "");
+                setUserClassId(boards[0]?.classes[0]?.id || "");
+                setIsCreateModalOpen(true);
+              }}
+              className="premium-btn-primary px-4 py-2 text-xs font-bold flex items-center gap-1.5 rounded-xl shadow-md hover:shadow-brand-royal/15 self-start sm:self-auto"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Student</span>
+            </button>
+          </div>
+
+          {/* Sub-tabs bar */}
+          <div className="flex border-b border-slate-200 dark:border-white/5 gap-6">
+            <button className="pb-3 text-xs font-extrabold text-brand-royal dark:text-white border-b-2 border-brand-royal">
+              Student List
+            </button>
+            <button onClick={() => setView("admin-analytics")} className="pb-3 text-xs font-semibold text-slate-500 hover:text-slate-950 dark:hover:text-slate-350 border-b-2 border-transparent">
+              Analytics &amp; Reports
+            </button>
+            <button className="pb-3 text-xs font-semibold text-slate-500 hover:text-slate-950 dark:hover:text-slate-350 border-b-2 border-transparent">
+              Blocked Users
+            </button>
+          </div>
+
+          {/* Filter row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search by name, email, location..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full premium-input pl-9 text-xs py-3 h-11"
+              />
+            </div>
+            {/* Grade */}
+            <div className="relative">
+              <select
+                value={gradeFilter}
+                onChange={(e) => setGradeFilter(e.target.value)}
+                className="w-full premium-input text-xs appearance-none pr-8 py-2.5 h-11 bg-white dark:bg-slate-950"
+              >
+                <option value="All Grades">All Grades</option>
+                {["Class 9", "Class 10", "Class 11", "Class 12"].map((g) => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-4 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+            </div>
+            {/* Status */}
+            <div className="relative">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full premium-input text-xs appearance-none pr-8 py-2.5 h-11 bg-white dark:bg-slate-950"
+              >
+                <option value="All Status">All Status</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+                <option value="Pending">Pending Activation</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-4 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+            </div>
+            {/* Subscriptions */}
+            <div className="relative">
+              <select
+                value={subFilter}
+                onChange={(e) => setSubFilter(e.target.value)}
+                className="w-full premium-input text-xs appearance-none pr-8 py-2.5 h-11 bg-white dark:bg-slate-950"
+              >
+                <option value="All Subscriptions">All Subscriptions</option>
+                <option value="Active">Active</option>
+                <option value="Expired">Expired</option>
+                <option value="Pending">Pending</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-4 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Toast / Error */}
+          {usersError && (
+            <div className="p-3.5 bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-semibold rounded-xl text-center">
+              {usersError}
+            </div>
+          )}
+
+          {/* Student list card table */}
+          <div className="glass-card border-slate-200 dark:border-white/5 overflow-hidden">
+            {loadingUsers && usersList.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+                <RefreshCw className="w-8 h-8 animate-spin mb-3 text-slate-350" />
+                <p className="text-xs">Fetching postgres users...</p>
+              </div>
+            ) : (() => {
+              const studentsOnly = usersList.filter((u) => u.role === "STUDENT");
+              const filteredStudents = studentsOnly.filter((student) => {
+                const nameMatch = `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchQuery.toLowerCase());
+                const emailMatch = (student.email || "").toLowerCase().includes(searchQuery.toLowerCase());
+                const locationMatch = (student.location || "").toLowerCase().includes(searchQuery.toLowerCase());
+                
+                const sub = student.studentProfile?.subscriptions?.[0];
+                const subStatus = sub?.status || "PENDING";
+                
+                const gradeVal = student.studentProfile?.class?.title || "Class 12";
+                const matchesGrade = gradeFilter === "All Grades" || gradeVal === gradeFilter;
+
+                const matchesStatus = statusFilter === "All Status" || 
+                  (statusFilter === "Active" && subStatus === "ACTIVE") ||
+                  (statusFilter === "Inactive" && subStatus !== "ACTIVE" && subStatus !== "PENDING") ||
+                  (statusFilter === "Pending" && subStatus === "PENDING");
+
+                const matchesSub = subFilter === "All Subscriptions" ||
+                  (subFilter === "Active" && subStatus === "ACTIVE") ||
+                  (subFilter === "Pending" && subStatus === "PENDING") ||
+                  (subFilter === "Expired" && subStatus === "EXPIRED");
+
+                return (nameMatch || emailMatch || locationMatch) && matchesGrade && matchesStatus && matchesSub;
+              });
+
+              if (filteredStudents.length === 0) {
+                return (
+                  <div className="text-center py-20 text-slate-500">
+                    <Users className="w-10 h-10 mx-auto mb-3 text-slate-300 dark:text-slate-755" />
+                    <p className="text-xs font-semibold">No scholars found matching the active filters.</p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-4">
+                  <div className="px-5 pt-5 flex justify-between items-center">
+                    <span className="text-[10px] text-slate-600 dark:text-slate-500 font-bold uppercase tracking-wider">
+                      Showing {filteredStudents.length} of {studentsOnly.length} students
+                    </span>
+                    <button onClick={fetchUsers} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-500">
+                      <RefreshCw className={`w-3.5 h-3.5 ${loadingUsers ? "animate-spin" : ""}`} />
+                    </button>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-200 dark:border-white/5 text-[10px] uppercase tracking-wider text-slate-600 dark:text-slate-400 font-extrabold bg-slate-50/50 dark:bg-slate-950/20">
+                          <th className="py-4 px-6">Student</th>
+                          <th className="py-4 px-6">Grade</th>
+                          <th className="py-4 px-6">Status</th>
+                          <th className="py-4 px-6">Subscription</th>
+                          <th className="py-4 px-6 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                        {filteredStudents.map((student) => {
+                          const sub = student.studentProfile?.subscriptions?.[0];
+                          const subStatus = sub?.status || "PENDING";
+                          const pay = sub?.payments?.[0];
+                          const payStatus = pay?.status || "PENDING";
+
+                          return (
+                            <tr key={student.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors">
+                              {/* Student Info */}
+                              <td className="py-4 px-6">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-royal/10 to-brand-violet/10 dark:from-brand-royal/20 dark:to-brand-violet/20 border border-brand-royal/10 text-brand-royal dark:text-brand-royal-300 font-bold flex items-center justify-center text-xs">
+                                    {(student.firstName?.[0] || "S").toUpperCase()}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                                      {student.firstName} {student.lastName}
+                                    </p>
+                                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono truncate">
+                                      {student.email}
+                                    </p>
+                                    {student.location && (
+                                      <p className="text-[9px] text-slate-400 flex items-center gap-0.5 mt-0.5 font-medium">
+                                        <span className="w-1.5 h-1.5 bg-brand-violet/50 rounded-full inline-block" />
+                                        {student.location}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* Grade */}
+                              <td className="py-4 px-6 text-xs text-slate-700 dark:text-slate-300 font-medium">
+                                {student.studentProfile?.class?.title || "Class 12"}
+                              </td>
+
+                              {/* Status Badge */}
+                              <td className="py-4 px-6">
+                                <span className={`inline-flex items-center gap-1 text-[9px] font-extrabold px-2 py-0.5 rounded-full border ${
+                                  subStatus === "ACTIVE"
+                                    ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                                    : subStatus === "PENDING"
+                                    ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                                    : "bg-slate-500/10 text-slate-600 border-slate-500/20"
+                                }`}>
+                                  {subStatus === "ACTIVE" ? "Active" : subStatus === "PENDING" ? "Pending Activation" : "Inactive"}
+                                </span>
+                              </td>
+
+                              {/* Subscription Badge */}
+                              <td className="py-4 px-6">
+                                <span className={`inline-flex items-center gap-1 text-[9px] font-extrabold px-2 py-0.5 rounded-full border ${
+                                  subStatus === "ACTIVE"
+                                    ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                                    : subStatus === "PENDING"
+                                    ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                                    : "bg-rose-500/10 text-rose-600 border-rose-500/20"
+                                }`}>
+                                  {subStatus === "ACTIVE" ? "Active" : subStatus === "PENDING" ? "Pending" : "Expired"}
+                                </span>
+                              </td>
+
+                              {/* Actions */}
+                              <td className="py-4 px-6 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    onClick={() => {
+                                      setActivatingStudent(student);
+                                      setActivationPaymentStatus(payStatus === "SUCCESS" ? "SUCCESS" : "SUCCESS");
+                                      setActivationPassword("");
+                                      setActivationError("");
+                                      setIsActivationModalOpen(true);
+                                    }}
+                                    className="p-2 rounded-lg border border-slate-200 dark:border-white/5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900/60 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-400 hover:text-brand-royal dark:hover:text-white transition-colors"
+                                    title="Edit student subscription and activate"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+
+                                  <button
+                                    onClick={() => handleDeleteUser(student.id)}
+                                    className="p-2 rounded-lg border border-transparent hover:border-red-500/20 text-slate-400 hover:text-red-500 hover:bg-red-500/5 transition-colors"
+                                    title="Delete Student"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Activation Overlay Modal */}
+          {isActivationModalOpen && activatingStudent && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+              <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/10 p-6 rounded-2xl w-full max-w-md shadow-2xl relative space-y-4">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2 border-b border-slate-100 dark:border-white/5 pb-3">
+                  <Settings className="w-5 h-5 text-brand-royal" />
+                  <span>Activate Student Subscription</span>
+                </h3>
+                
+                {activationError && (
+                  <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-semibold rounded-lg text-center">
+                    {activationError}
+                  </div>
+                )}
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase">Student Name</label>
+                    <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-lg border border-slate-200 dark:border-white/5">
+                      {activatingStudent.firstName} {activatingStudent.lastName}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase">Registered Email</label>
+                    <div className="text-xs font-mono text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-lg border border-slate-200 dark:border-white/5">
+                      {activatingStudent.email}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase">Payment Status</label>
+                    <select
+                      value={activationPaymentStatus}
+                      onChange={(e) => setActivationPaymentStatus(e.target.value as any)}
+                      className="w-full premium-input text-xs"
+                    >
+                      <option value="SUCCESS">Paid (SUCCESS)</option>
+                      <option value="PENDING">Unpaid (PENDING)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase">Temporary Password</label>
+                    <input
+                      type="text"
+                      placeholder="Enter temporary password for the student"
+                      value={activationPassword}
+                      onChange={(e) => setActivationPassword(e.target.value)}
+                      className="w-full premium-input text-xs"
+                      required
+                    />
+                    <p className="text-[9px] text-slate-400 mt-1">
+                      Once sent, the student will receive an email containing this temporary password to log in.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-white/5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsActivationModalOpen(false);
+                      setActivatingStudent(null);
+                      setActivationPassword("");
+                    }}
+                    className="px-4 py-2 text-xs font-bold bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleActivateStudent}
+                    disabled={activationLoading || !activationPassword}
+                    className="premium-btn-primary px-5 py-2 text-xs font-bold flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    {activationLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                    <span>Send Activation Email</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Create Student Overlay Modal */}
+          {isCreateModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+              <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/10 p-6 rounded-2xl w-full max-w-md shadow-2xl relative space-y-4 max-h-[90vh] overflow-y-auto">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white pb-3 border-b border-slate-100 dark:border-white/5">
+                  Register New Scholar
+                </h3>
+
+                {usersError && (
+                  <div className="p-3.5 bg-red-500/10 border border-red-500/20 text-red-505 text-xs font-semibold rounded-xl text-center">
+                    {usersError}
+                  </div>
+                )}
+
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  setUsersError("");
+                  try {
+                    const payload = {
+                      email: userEmail,
+                      password: userPassword,
+                      firstName: userFirstName,
+                      lastName: userLastName,
+                      role: "STUDENT",
+                      boardId: userBoardId,
+                      classId: userClassId,
+                    };
+                    await authAPI.createUser(payload);
+                    setIsCreateModalOpen(false);
                     setUserEmail("");
                     setUserPassword("");
                     setUserFirstName("");
                     setUserLastName("");
-                    setUserBio("");
-                    setUserQualification("");
-                  }}
-                  className="text-[10px] text-slate-500 hover:text-red-500 font-semibold"
-                >
-                  Cancel Edit
-                </button>
-              )}
-            </h4>
+                    fetchUsers();
+                    fetchAnalytics();
+                    useLmsStore.getState().addNotification("Scholar Registered", `Scholar account ${userEmail} registered successfully.`, "success");
+                  } catch (err: any) {
+                    setUsersError(err.message || "Failed to register scholar.");
+                  }
+                }} className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase">First Name</label>
+                      <input type="text" placeholder="e.g. Aarav" value={userFirstName} onChange={(e) => setUserFirstName(e.target.value)} className="premium-input text-xs" required />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase">Last Name</label>
+                      <input type="text" placeholder="e.g. Sharma" value={userLastName} onChange={(e) => setUserLastName(e.target.value)} className="premium-input text-xs" required />
+                    </div>
+                  </div>
 
-            {usersError && (
-              <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold rounded-lg text-center">
-                {usersError}
-              </div>
-            )}
-
-            <form onSubmit={editingUser ? handleUpdateUser : handleCreateUser} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-600 dark:text-slate-500 uppercase">First Name</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Aarav"
-                    value={userFirstName}
-                    onChange={(e) => setUserFirstName(e.target.value)}
-                    className="premium-input text-xs"
-                    required
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-600 dark:text-slate-500 uppercase">Last Name</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Sharma"
-                    value={userLastName}
-                    onChange={(e) => setUserLastName(e.target.value)}
-                    className="premium-input text-xs"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-600 dark:text-slate-500 uppercase">Academic Email</label>
-                <input
-                  type="email"
-                  placeholder="e.g. aarav@nexoralearning.com"
-                  value={userEmail}
-                  onChange={(e) => setUserEmail(e.target.value)}
-                  className="premium-input text-xs"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-600 dark:text-slate-500 uppercase">
-                  {editingUser ? "Password (leave blank to keep unchanged)" : "Password"}
-                </label>
-                <input
-                  type="password"
-                  placeholder="e.g. password123"
-                  value={userPassword}
-                  onChange={(e) => setUserPassword(e.target.value)}
-                  className="premium-input text-xs"
-                  required={!editingUser}
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-600 dark:text-slate-500 uppercase">Academic Role</label>
-                <select
-                  value={userRole}
-                  onChange={(e) => setUserRole(e.target.value as any)}
-                  className="premium-input text-xs bg-white dark:bg-slate-950"
-                >
-                  <option value="STUDENT">STUDENT</option>
-                  <option value="TEACHER">TEACHER</option>
-                  <option value="ADMIN">ADMIN</option>
-                </select>
-              </div>
-
-              {/* STUDENT SPECIFIC FIELDS */}
-              {userRole === "STUDENT" && (
-                <div className="space-y-3 p-3 bg-slate-50 dark:bg-slate-950/40 rounded-xl border border-slate-200 dark:border-white/5">
                   <div className="space-y-1">
-                    <label className="text-[9px] font-bold text-slate-600 dark:text-slate-500 uppercase">Opted Board</label>
-                    <select
-                      value={userBoardId}
-                      onChange={(e) => {
+                    <label className="text-[10px] font-bold text-slate-500 uppercase">Academic Email</label>
+                    <input type="email" placeholder="e.g. aarav@gmail.com" value={userEmail} onChange={(e) => setUserEmail(e.target.value)} className="premium-input text-xs" required />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase">Password</label>
+                    <input type="password" placeholder="e.g. password123" value={userPassword} onChange={(e) => setUserPassword(e.target.value)} className="premium-input text-xs" required />
+                  </div>
+
+                  <div className="space-y-3 p-3 bg-slate-50 dark:bg-slate-905 rounded-xl border border-slate-200 dark:border-white/5">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-500 uppercase">Opted Board</label>
+                      <select value={userBoardId} onChange={(e) => {
                         setUserBoardId(e.target.value);
                         const matched = boards.find((b) => b.id === e.target.value);
                         setUserClassId(matched?.classes[0]?.id || "");
-                      }}
-                      className="premium-input text-[11px] bg-white dark:bg-slate-950"
-                      required
-                    >
-                      <option value="">-- Select Board --</option>
-                      {boards.map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.title}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-bold text-slate-600 dark:text-slate-500 uppercase">Class Grade</label>
-                    <select
-                      value={userClassId}
-                      onChange={(e) => setUserClassId(e.target.value)}
-                      className="premium-input text-[11px] bg-white dark:bg-slate-950"
-                      required
-                    >
-                      <option value="">-- Select Class --</option>
-                      {boards
-                        .find((b) => b.id === userBoardId)
-                        ?.classes.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.title}
-                          </option>
+                      }} className="premium-input text-[11px] bg-white dark:bg-slate-950" required>
+                        <option value="">-- Select Board --</option>
+                        {boards.map((b) => (
+                          <option key={b.id} value={b.id}>{b.title}</option>
                         ))}
-                    </select>
-                  </div>
-                </div>
-              )}
-
-              {/* TEACHER SPECIFIC FIELDS */}
-              {userRole === "TEACHER" && (
-                <div className="space-y-3 p-3 bg-slate-50 dark:bg-slate-950/40 rounded-xl border border-slate-200 dark:border-white/5">
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-bold text-slate-600 dark:text-slate-500 uppercase">Qualification</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. M.Sc. in Mathematics"
-                      value={userQualification}
-                      onChange={(e) => setUserQualification(e.target.value)}
-                      className="premium-input text-xs"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-bold text-slate-600 dark:text-slate-500 uppercase">Instructor Bio</label>
-                    <textarea
-                      placeholder="e.g. Expert in Algebra and Geometry..."
-                      value={userBio}
-                      onChange={(e) => setUserBio(e.target.value)}
-                      className="premium-input text-xs h-16"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* ADMIN SPECIFIC FIELDS */}
-              {userRole === "ADMIN" && (
-                <div className="space-y-3 p-3 bg-slate-50 dark:bg-slate-950/40 rounded-xl border border-slate-200 dark:border-white/5">
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-bold text-slate-600 dark:text-slate-500 uppercase">Department</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Curriculum Operations"
-                      value={userDept}
-                      onChange={(e) => setUserDept(e.target.value)}
-                      className="premium-input text-xs"
-                      required
-                    />
-                  </div>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                className="w-full premium-btn-primary py-2.5 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-95"
-              >
-                <Plus className="w-4 h-4" />
-                <span>{editingUser ? "Save User Changes" : "Create User Account"}</span>
-              </button>
-            </form>
-          </div>
-
-          {/* Right Column: Database Users List */}
-          <div className="lg:col-span-2 glass-card p-5 border-slate-200 dark:border-white/5 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/5 pb-2">
-              <h4 className="text-xs font-bold text-slate-700 dark:text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                <Users className="w-4 h-4 text-brand-royal" />
-                <span>Active Database Logins ({usersList.length})</span>
-              </h4>
-              <button
-                type="button"
-                onClick={fetchUsers}
-                className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors text-slate-500"
-                title="Refresh user list"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${loadingUsers ? "animate-spin" : ""}`} />
-              </button>
-            </div>
-
-            {loadingUsers && usersList.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-slate-500">
-                <RefreshCw className="w-8 h-8 animate-spin mb-3 text-slate-350" />
-                <p className="text-xs">Connecting to Database Console...</p>
-              </div>
-            ) : usersList.length === 0 ? (
-              <div className="text-center py-20 text-slate-500">
-                <Users className="w-10 h-10 mx-auto mb-3 text-slate-300 dark:text-slate-750" />
-                <p className="text-xs font-semibold">No registered users in PostgreSQL database.</p>
-              </div>
-            ) : (
-              <div className="space-y-2.5 max-h-[550px] overflow-y-auto pr-1">
-                {usersList.map((user) => (
-                  <div
-                    key={user.id}
-                    className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-white/5 rounded-xl hover:border-slate-300 dark:hover:border-white/10 transition-all"
-                  >
-                    <div className="space-y-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-slate-800 dark:text-white truncate">
-                          {user.firstName} {user.lastName}
-                        </span>
-                        <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase ${
-                          user.role === "ADMIN"
-                            ? "bg-red-500/10 text-red-500 border border-red-500/20"
-                            : user.role === "TEACHER"
-                            ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
-                            : "bg-blue-500/10 text-blue-500 border border-blue-500/20"
-                        }`}>
-                          {user.role}
-                        </span>
-                      </div>
-                      <span className="text-xs text-slate-500 block font-mono truncate">{user.email}</span>
-                      
-                      {/* Sub-profile Context Details */}
-                      {user.role === "STUDENT" && user.studentProfile && (
-                        <span className="text-[10px] text-slate-400 block font-medium">
-                          Board: {user.studentProfile.board?.name || "TNSB"} | Grade: {user.studentProfile.class?.name || "Class 12"}
-                        </span>
-                      )}
-                      {user.role === "TEACHER" && user.teacherProfile && (
-                        <span className="text-[10px] text-slate-400 block truncate">
-                          Qualification: {user.teacherProfile.qualification}
-                        </span>
-                      )}
-                      {user.role === "ADMIN" && user.adminProfile && (
-                        <span className="text-[10px] text-slate-400 block">
-                          Dept: {user.adminProfile.dept}
-                        </span>
-                      )}
+                      </select>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingUser(user);
-                          setUserEmail(user.email);
-                          setUserPassword(""); // password input remains blank unless editing
-                          setUserFirstName(user.firstName);
-                          setUserLastName(user.lastName);
-                          setUserRole(user.role);
-                          if (user.role === "STUDENT" && user.studentProfile) {
-                            setUserBoardId(user.studentProfile.boardId);
-                            setUserClassId(user.studentProfile.classId);
-                          } else if (user.role === "TEACHER" && user.teacherProfile) {
-                            setUserBio(user.teacherProfile.bio || "");
-                            setUserQualification(user.teacherProfile.qualification || "");
-                          } else if (user.role === "ADMIN" && user.adminProfile) {
-                            setUserDept(user.adminProfile.dept || "");
-                          }
-                        }}
-                        className="px-2.5 py-1 text-[10px] font-bold rounded-lg border border-slate-200 dark:border-white/5 bg-slate-100 dark:bg-slate-950 text-slate-700 dark:text-slate-400 hover:text-brand-royal dark:hover:text-white hover:border-brand-royal/50 transition-colors"
-                      >
-                        Edit
-                      </button>
-                      
-                      {/* Prevent self-deletion */}
-                      {user.email !== profile?.email && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteUser(user.id)}
-                          className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-500 uppercase">Class Grade</label>
+                      <select value={userClassId} onChange={(e) => setUserClassId(e.target.value)} className="premium-input text-[11px] bg-white dark:bg-slate-950" required>
+                        <option value="">-- Select Class --</option>
+                        {boards.find((b) => b.id === userBoardId)?.classes.map((c) => (
+                          <option key={c.id} value={c.id}>{c.title}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-white/5">
+                    <button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-4 py-2 text-xs font-bold bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-800">Cancel</button>
+                    <button type="submit" className="premium-btn-primary px-5 py-2 text-xs font-bold">Register Scholar</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── REGIONAL DISTRIBUTION FRESH PAGE ────────────────────────────────── */}
+      {activeView === "admin-regional-distribution" && (
+        <div className="space-y-6 animate-fade-in-up">
+          <div className="flex items-center gap-3 mb-6">
+            <button
+              onClick={() => setView("admin-analytics")}
+              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors active:scale-95"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">Regional Student Distribution</h2>
+              <p className="text-xs text-slate-500">State-wise student registration statistics and percentages</p>
+            </div>
+          </div>
+
+          <div className="glass-card p-6 border-slate-200 dark:border-white/5 space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/5 pb-4">
+              <h4 className="text-xs font-bold text-slate-700 dark:text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <Activity className="w-4 h-4 text-brand-royal" />
+                <span>Geographical Breakdown</span>
+              </h4>
+              <span className="text-xs text-slate-500 font-medium">Total Registered States: {analyticsData.regionalDistribution?.length || 0}</span>
+            </div>
+
+            {analyticsData.regionalDistribution && analyticsData.regionalDistribution.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {analyticsData.regionalDistribution.map((r: any, i: number) => (
+                  <div key={i} className="p-4 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-white/5 rounded-2xl space-y-3 hover:border-slate-300 dark:hover:border-white/10 transition-all">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">{r.state}</span>
+                      <span className="text-xs font-bold text-brand-violet dark:text-brand-violet-light font-mono bg-violet-500/10 px-2.5 py-1 rounded-lg border border-brand-violet/20">
+                        {r.percentage}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-950 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-brand-royal to-brand-violet rounded-full transition-all duration-500" style={{ width: r.percentage }} />
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-bold block text-right">{r.students} Active Scholars</span>
                     </div>
                   </div>
                 ))}
+              </div>
+            ) : (
+              <div className="text-center py-20 text-slate-500">
+                <Users className="w-12 h-12 mx-auto mb-3 text-slate-300 dark:text-slate-750 animate-pulse" />
+                <p className="text-xs font-semibold">No registered student states found in database console.</p>
               </div>
             )}
           </div>

@@ -8,6 +8,7 @@ import {
   FileText,
   Trophy,
   User,
+  Users,
   Brain,
   Tv,
   Lock,
@@ -47,6 +48,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
   const adminLinks = [
     { id: "admin-analytics", label: "Platform Analytics", icon: BarChart3 },
+    { id: "admin-users", label: "Students", icon: Users },
     { id: "drm-security", label: "DRM Video Shield", icon: Lock },
     { id: "parent-portal", label: "Parent Dashboard", icon: ShieldAlert },
   ];

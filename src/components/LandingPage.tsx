@@ -126,19 +126,13 @@ export const LandingPage: React.FC = () => {
           </span>
         </h1>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 relative z-10">
+        <div className="flex justify-center mb-16 relative z-10">
           <button
             onClick={() => setView("login-student")}
             className="w-full sm:w-auto px-8 py-3.5 rounded-none bg-brand-royal hover:bg-blue-650 text-white font-bold uppercase tracking-wider shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2 group transform hover:-translate-y-0.5 active:translate-y-0"
           >
             <span>Enter Student Workspace</span>
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          </button>
-          <button
-            onClick={() => setView("login-educator")}
-            className="w-full sm:w-auto px-8 py-3.5 rounded-none bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 transform hover:-translate-y-0.5 active:translate-y-0"
-          >
-            Sign In as Educator
           </button>
         </div>
       </section>

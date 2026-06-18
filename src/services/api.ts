@@ -36,6 +36,7 @@ export const authAPI = {
     role: string,
     boardId: string,
     classId: string,
+    location?: string,
   ) => {
     const res = await fetch(`${API_BASE_URL}/auth/signup`, {
       method: "POST",
@@ -48,6 +49,7 @@ export const authAPI = {
         role,
         boardId,
         classId,
+        location,
       }),
     });
     if (!res.ok) throw new Error("Signup failed");
@@ -143,6 +145,30 @@ export const authAPI = {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || 'Failed to reset password');
     }
+    return res.json();
+  },
+  activateUser: async (id: string, payload: { paymentStatus: string; password?: string }) => {
+    const token = localStorage.getItem("auth_token");
+    const res = await fetch(`${API_BASE_URL}/auth/users/${id}/activate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Failed to activate student account");
+    }
+    return res.json();
+  },
+  getAdminAnalytics: async () => {
+    const token = localStorage.getItem("auth_token");
+    const res = await fetch(`${API_BASE_URL}/auth/admin-analytics`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error("Failed to fetch admin analytics");
     return res.json();
   },
 };

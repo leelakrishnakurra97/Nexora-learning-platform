@@ -878,6 +878,8 @@ function App() {
       case "admin-structure":
       case "admin-analytics":
       case "admin-upload":
+      case "admin-users":
+      case "admin-regional-distribution":
         return <AdminPortal />;
       case "parent-portal":
         return <ParentPortal />;
@@ -935,7 +937,7 @@ function App() {
         // Public / Full-page screens do not require standard Sidebar/Header shells
         <>
           {activeView === "landing" && <LandingPage />}
-          {activeView === "login" && <LoginPage />}
+          {activeView === "login" && <LoginPage mode="student" />}
           {activeView === "login-student" && <LoginPage mode="student" />}
           {activeView === "login-educator" && <LoginPage mode="educator" />}
           {activeView === "signup" && <SignupPage />}
@@ -944,7 +946,7 @@ function App() {
           {activeView === "get-credentials" && <GetCredentialsPage />}
           {activeView === "forgot-password" && <ForgotPasswordPage />}
           {activeView === "reset-password" && <ResetPasswordPage />}
-          {!isPublicPage && !auth.isAuthenticated && <LoginPage />}
+          {!isPublicPage && !auth.isAuthenticated && <LoginPage mode="student" />}
         </>
       )}
       <DemoPanel />
