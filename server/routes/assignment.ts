@@ -148,7 +148,7 @@ router.get('/assignments', requireAuth, async (req, res) => {
             status = 'Graded';
             grade = submission.feedback ? `${submission.feedback.marksObtained}/100` : undefined;
             feedback = submission.feedback?.comment || undefined;
-            teacherName = submission.feedback ? `${submission.feedback.teacher.user.firstName} ${submission.feedback.teacher.user.lastName}` : undefined;
+            teacherName = (submission.feedback && submission.feedback.teacher && submission.feedback.teacher.user) ? `${submission.feedback.teacher.user.firstName} ${submission.feedback.teacher.user.lastName}` : undefined;
           }
         }
 

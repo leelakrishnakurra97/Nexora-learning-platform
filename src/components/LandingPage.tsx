@@ -14,11 +14,39 @@ import {
   CheckCircle,
   BookOpen,
   StarHalf,
+  ChevronLeft,
+  ChevronRight,
+  Quote,
 } from "lucide-react";
 import { PlanetLogo } from "./PlanetLogo";
 
 export const LandingPage: React.FC = () => {
   const { setView } = useLmsStore();
+  const [currentTestimonialIndex, setCurrentTestimonialIndex] = React.useState(0);
+  const [animate, setAnimate] = React.useState(true);
+
+  const handlePrev = () => {
+    setAnimate(false);
+    setTimeout(() => {
+      setCurrentTestimonialIndex((prev) => (prev === 0 ? testimonials.length - 1 : prev - 1));
+      setAnimate(true);
+    }, 200);
+  };
+
+  const handleNext = () => {
+    setAnimate(false);
+    setTimeout(() => {
+      setCurrentTestimonialIndex((prev) => (prev === testimonials.length - 1 ? 0 : prev + 1));
+      setAnimate(true);
+    }, 200);
+  };
+
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth" });
+    }
+  };
 
   const features = [
     {
@@ -75,6 +103,28 @@ export const LandingPage: React.FC = () => {
           <span className="font-extrabold font-display text-lg sm:text-2xl tracking-tight text-slate-900 group-hover:text-brand-violet transition-colors whitespace-nowrap">
             Nexora Learning
           </span>
+        </div>
+
+        {/* Navigation Links in Center */}
+        <div className="hidden md:flex items-center gap-8">
+          <button
+            onClick={() => scrollToSection("features")}
+            className="text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-brand-royal transition-colors bg-transparent border-none cursor-pointer"
+          >
+            Features
+          </button>
+          <button
+            onClick={() => scrollToSection("about-us")}
+            className="text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-brand-royal transition-colors bg-transparent border-none cursor-pointer"
+          >
+            About Us
+          </button>
+          <button
+            onClick={() => scrollToSection("testimonials")}
+            className="text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-brand-royal transition-colors bg-transparent border-none cursor-pointer"
+          >
+            Testimonials
+          </button>
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4 shrink-0">
@@ -211,76 +261,158 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
+      {/* About Us Section */}
+      <section
+        id="about-us"
+        className="relative z-10 max-w-6xl mx-auto px-6 py-20 border-t border-slate-100 text-left"
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="space-y-6">
+            <span className="text-xs font-bold text-brand-royal uppercase tracking-widest block">
+              About Us
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold font-display text-slate-900 tracking-tight">
+              Pioneering the Future of Secondary Education
+            </h2>
+            <p className="text-sm sm:text-base text-slate-650 leading-relaxed">
+              At Nexora Learning, we design elite academic environments for Class 9–12 scholars. Our platform integrates physical curriculum materials with advanced WebRTC real-time tutoring classrooms and a high-performance contextual AI mentor available 24/7.
+            </p>
+            <p className="text-sm sm:text-base text-slate-650 leading-relaxed">
+              We aim to unlock conceptual clarity in mathematics, physics, and chemistry. By aligning our content precisely with regional and national syllabus standards, we empower students to transform their academic results and construct a foundation for future engineering and scientific careers.
+            </p>
+            <div className="flex flex-row items-center gap-6 pt-2">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-brand-royal" />
+                <span className="text-xs sm:text-sm font-bold text-slate-800">State Board & CBSE Aligned</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-brand-royal" />
+                <span className="text-xs sm:text-sm font-bold text-slate-800">Personalized Learning Paths</span>
+              </div>
+            </div>
+          </div>
+          <div className="relative">
+            <div className="rounded-2xl border border-slate-200/80 bg-slate-50/50 p-2 shadow-xl">
+              <div className="rounded-xl overflow-hidden aspect-video bg-gradient-to-tr from-brand-royal to-brand-violet flex items-center justify-center text-white p-8 relative">
+                <div className="absolute inset-0 bg-black/10 mix-blend-multiply" />
+                <div className="relative z-10 text-center space-y-4">
+                  <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center mx-auto shadow-inner">
+                    <BookOpen className="w-8 h-8 text-white" />
+                  </div>
+                  <h4 className="text-lg font-bold">Uncompromising Quality</h4>
+                  <p className="text-xs text-white/80 max-w-sm mx-auto">
+                    Designed to bridge high-end technology with proven pedagogy for top-tier academic results.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Testimonials */}
       <section
         id="testimonials"
-        className="relative z-10 max-w-6xl mx-auto px-6 py-20 border-t border-slate-100"
+        className="relative z-10 max-w-5xl mx-auto px-6 py-24 border-t border-slate-100"
       >
         <div className="text-center max-w-2xl mx-auto mb-16">
           <span className="text-xs font-bold text-brand-royal uppercase tracking-widest block mb-2">
             Testimonials
           </span>
-          <h2 className="text-3xl font-bold text-slate-900 tracking-tight">
+          <h2 className="text-3xl sm:text-4xl font-extrabold font-display text-slate-900 tracking-tight">
             Approved by Elite Parents and Educators
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {testimonials.map((test, index) => (
-            <div
-              key={index}
-              className="bg-white border border-slate-200 p-6 flex flex-col justify-between rounded-2xl shadow-sm hover:shadow-md transition-all"
-            >
-              <p className="text-sm text-slate-600 italic leading-relaxed mb-6">
-                "{test.quote}"
-              </p>
-              <div className="flex items-center gap-3">
+        {/* Premium Testimonials Card with Slide/Fade Animation */}
+        <div className="bg-gradient-to-br from-white to-slate-50 border border-slate-200/80 rounded-3xl p-8 sm:p-12 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.03)] hover:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.06)] transition-all duration-500 relative overflow-hidden">
+          {/* Subtle Decorative Glows */}
+          <div className="absolute -top-24 -right-24 w-48 h-48 bg-brand-royal/5 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-brand-violet/5 rounded-full blur-3xl pointer-events-none" />
+
+          <div className={`flex flex-col md:flex-row gap-8 md:gap-12 items-start transition-all duration-300 ${animate ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}>
+            {/* Left Column: Profile Card */}
+            <div className="w-full md:w-1/3 flex flex-col items-center md:items-start text-center md:text-left shrink-0">
+              <div className="p-1 bg-gradient-to-tr from-brand-royal to-brand-violet rounded-3xl shadow-sm mb-5 hover:scale-105 transition-transform duration-300">
                 <img
-                  src={test.avatar}
-                  alt={test.author}
-                  className="w-10 h-10 rounded-full border border-slate-200 object-cover"
+                  src={testimonials[currentTestimonialIndex].avatar}
+                  alt={testimonials[currentTestimonialIndex].author}
+                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-[22px] object-cover"
                 />
-                <div className="text-left">
-                  <h4 className="text-xs sm:text-sm font-bold text-slate-900">
-                    {test.author}
-                  </h4>
-                  <p className="text-[10px] text-slate-500">{test.role}</p>
-                </div>
-                <div className="ml-auto flex items-center gap-1.5">
-                  <div className="flex gap-0.5">
-                    {Array.from({ length: 5 }).map((_, i) => {
-                      const starVal = i + 1;
-                      if (test.rating >= starVal) {
-                        return (
-                          <Star
-                            key={i}
-                            className="w-3 h-3 text-yellow-400 fill-yellow-400"
-                          />
-                        );
-                      } else if (test.rating > starVal - 1) {
-                        return (
-                          <StarHalf
-                            key={i}
-                            className="w-3 h-3 text-yellow-400 fill-yellow-400"
-                          />
-                        );
-                      } else {
-                        return (
-                          <Star
-                            key={i}
-                            className="w-3 h-3 text-slate-300"
-                          />
-                        );
-                      }
-                    })}
-                  </div>
-                  <span className="text-xs font-bold text-slate-500 min-w-[18px]">
-                    {test.rating}
-                  </span>
-                </div>
+              </div>
+              <h4 className="text-xl font-extrabold font-display text-slate-900 tracking-tight mb-1">
+                {testimonials[currentTestimonialIndex].author}
+              </h4>
+              <p className="text-xs font-semibold text-slate-500 mb-8 max-w-[200px] leading-relaxed">
+                {testimonials[currentTestimonialIndex].role}
+              </p>
+              
+              {/* Premium Navigation Arrows */}
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={handlePrev}
+                  className="w-11 h-11 border border-brand-royal/20 bg-gradient-to-tr from-brand-royal/10 to-brand-violet/10 hover:from-brand-royal hover:to-brand-violet text-brand-royal hover:text-white hover:border-transparent flex items-center justify-center transition-all duration-300 hover:scale-105 active:scale-95 shadow-sm hover:shadow-md cursor-pointer"
+                  style={{ borderRadius: "9999px" }}
+                  title="Previous testimonial"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={handleNext}
+                  className="w-11 h-11 border border-brand-royal/20 bg-gradient-to-tr from-brand-royal/10 to-brand-violet/10 hover:from-brand-royal hover:to-brand-violet text-brand-royal hover:text-white hover:border-transparent flex items-center justify-center transition-all duration-300 hover:scale-105 active:scale-95 shadow-sm hover:shadow-md cursor-pointer"
+                  style={{ borderRadius: "9999px" }}
+                  title="Next testimonial"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
               </div>
             </div>
-          ))}
+
+            {/* Right Column: Quote Text */}
+            <div className="flex-1 text-left space-y-6 relative pt-4 md:pt-6">
+              {/* Huge quote icon watermark */}
+              <Quote className="w-14 h-14 text-brand-royal/10 fill-brand-royal/[0.02] absolute -top-4 -left-4 rotate-180 select-none pointer-events-none" />
+              
+              <p className="text-lg sm:text-xl font-medium text-slate-705 leading-relaxed italic relative z-10 font-sans">
+                "{testimonials[currentTestimonialIndex].quote}"
+              </p>
+              
+              {/* Star Rating */}
+              <div className="flex items-center gap-2 pt-6 border-t border-slate-150">
+                <div className="flex gap-0.5">
+                  {Array.from({ length: 5 }).map((_, i) => {
+                    const starVal = i + 1;
+                    const rating = testimonials[currentTestimonialIndex].rating;
+                    if (rating >= starVal) {
+                      return (
+                        <Star
+                          key={i}
+                          className="w-4 h-4 text-yellow-400 fill-yellow-400"
+                        />
+                      );
+                    } else if (rating > starVal - 1) {
+                      return (
+                        <StarHalf
+                          key={i}
+                          className="w-4 h-4 text-yellow-400 fill-yellow-400"
+                        />
+                      );
+                    } else {
+                      return (
+                        <Star
+                          key={i}
+                          className="w-4 h-4 text-slate-200"
+                        />
+                      );
+                    }
+                  })}
+                </div>
+                <span className="text-xs font-bold text-slate-450 tracking-wider">
+                  {testimonials[currentTestimonialIndex].rating} / 5.0 RATING
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 

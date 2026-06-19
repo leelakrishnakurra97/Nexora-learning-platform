@@ -1,676 +1,20 @@
-generator client {
-  provider = "prisma-client-js"
-}
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-model admins {
-  id    String @id @db.Uuid
-  dept  String @default("Operations")
-  users users  @relation(fields: [id], references: [id], onDelete: Cascade)
+generator client {
+  provider = "prisma-client-js"
 }
 
-model assignment_feedbacks {
-  id                     String                 @id @db.Uuid
-  submission_id          String                 @unique @db.Uuid
-  teacher_id             String                 @db.Uuid
-  marks_obtained         Float
-  passed                 Boolean
-  comment                String?
-  graded_at              DateTime               @default(now())
-  assignment_submissions assignment_submissions @relation(fields: [submission_id], references: [id], onDelete: Cascade)
-  teachers               teachers               @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
-}
-
-model assignment_submissions {
-  id                   String                @id @db.Uuid
-  assignment_id        String                @db.Uuid
-  student_id           String                @db.Uuid
-  submission_url       String
-  status               SubmissionStatus      @default(SUBMITTED)
-  submitted_at         DateTime              @default(now())
-  assignment_feedbacks assignment_feedbacks?
-  assignments          assignments           @relation(fields: [assignment_id], references: [id], onDelete: Cascade)
-  students             students              @relation(fields: [student_id], references: [id], onDelete: Cascade)
-
-  @@unique([student_id, assignment_id])
-}
-
-model assignments {
-  id                     String                   @id @db.Uuid
-  title                  String
-  description            String
-  file_url               String?
-  topic_id               String                   @db.Uuid
-  max_marks              Float                    @default(100.0)
-  passing_marks          Float                    @default(40.0)
-  deadline               DateTime?
-  created_at             DateTime                 @default(now())
-  updated_at             DateTime
-  assignment_submissions assignment_submissions[]
-  topics                 topics                   @relation(fields: [topic_id], references: [id], onDelete: Cascade)
-}
-
-model boards {
-  id         String     @id @db.Uuid
-  name       String     @unique
-  code       String     @unique
-  created_at DateTime   @default(now())
-  updated_at DateTime
-  classes    classes[]
-  courses    courses[]
-  students   students[]
-}
-
-model chapters {
-  id                       String                     @id @db.Uuid
-  name                     String
-  sort_order               Int
-  unit_id                  String                     @db.Uuid
-  created_at               DateTime                   @default(now())
-  updated_at               DateTime
-  units                    units                      @relation(fields: [unit_id], references: [id], onDelete: Cascade)
-  student_chapter_progress student_chapter_progress[]
-  topics                   topics[]
-
-  @@unique([unit_id, name])
-}
-
-model classes {
-  id         String     @id @db.Uuid
-  name       String
-  sort_order Int
-  board_id   String     @db.Uuid
-  created_at DateTime   @default(now())
-  updated_at DateTime
-  boards     boards     @relation(fields: [board_id], references: [id], onDelete: Cascade)
-  courses    courses[]
-  students   students[]
-  subjects   subjects[]
-
-  @@unique([board_id, name])
-}
-
-model course_notes {
-  id                       String   @id @db.Uuid
-  title                    String
-  file_url                 String
-  topic_id                 String   @db.Uuid
-  sort_order               Int
-  is_required_for_complete Boolean  @default(true)
-  created_at               DateTime @default(now())
-  updated_at               DateTime
-  subject_title            String?
-  uploaded_by_name         String?
-  uploaded_by_user_id      String?
-  topics                   topics   @relation(fields: [topic_id], references: [id], onDelete: Cascade)
-
-  @@unique([topic_id, sort_order])
-}
-
-model course_resources {
-  id         String   @id @db.Uuid
-  title      String
-  file_url   String
-  file_type  String
-  topic_id   String   @db.Uuid
-  sort_order Int
-  created_at DateTime @default(now())
-  updated_at DateTime
-  topics     topics   @relation(fields: [topic_id], references: [id], onDelete: Cascade)
-
-  @@unique([topic_id, sort_order])
-}
-
-model course_videos {
-  id                  String                @id @db.Uuid
-  title               String
-  video_url           String
-  thumbnail_url       String?
-  duration            Int
-  drm_metadata        Json?
-  topic_id            String                @db.Uuid
-  sort_order          Int
-  created_at          DateTime              @default(now())
-  updated_at          DateTime
-  drm_enabled         Boolean?              @default(false)
-  encrypted_path      String?
-  hls_path            String?
-  dash_path           String?
-  license_id          String?
-  topics              topics                @relation(fields: [topic_id], references: [id], onDelete: Cascade)
-  video_watch_history video_watch_history[]
-
-  @@unique([topic_id, sort_order])
-}
-
-model courses {
-  id            String   @id @db.Uuid
-  title         String
-  description   String
-  thumbnail_url String?
-  subject_id    String   @db.Uuid
-  class_id      String   @db.Uuid
-  board_id      String   @db.Uuid
-  teacher_id    String   @db.Uuid
-  is_active     Boolean  @default(true)
-  created_at    DateTime @default(now())
-  updated_at    DateTime
-  boards        boards   @relation(fields: [board_id], references: [id], onDelete: Cascade)
-  classes       classes  @relation(fields: [class_id], references: [id], onDelete: Cascade)
-  subjects      subjects @relation(fields: [subject_id], references: [id], onDelete: Cascade)
-  teachers      teachers @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
-}
-
-model learning_streaks {
-  id                 String    @id @db.Uuid
-  student_id         String    @unique @db.Uuid
-  current_streak     Int       @default(0)
-  longest_streak     Int       @default(0)
-  last_activity_date DateTime?
-  updated_at         DateTime
-  students           students  @relation(fields: [student_id], references: [id], onDelete: Cascade)
-}
-
-model live_chat_messages {
-  id            String       @id @db.Uuid
-  live_class_id String       @db.Uuid
-  user_id       String       @db.Uuid
-  message       String
-  sent_at       DateTime     @default(now())
-  live_classes  live_classes @relation(fields: [live_class_id], references: [id], onDelete: Cascade)
-  users         users        @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@index([live_class_id, sent_at])
-}
-
-model live_class_participants {
-  id                     String           @id @db.Uuid
-  live_class_id          String           @db.Uuid
-  student_id             String           @db.Uuid
-  joined_at              DateTime         @default(now())
-  left_at                DateTime?
-  total_duration_minutes Int?
-  attendance_status      AttendanceStatus @default(PRESENT)
-  live_classes           live_classes     @relation(fields: [live_class_id], references: [id], onDelete: Cascade)
-  students               students         @relation(fields: [student_id], references: [id], onDelete: Cascade)
-
-  @@unique([live_class_id, student_id])
-}
-
-model live_classes {
-  id                      String                    @id @db.Uuid
-  title                   String
-  description             String?
-  subject_id              String                    @db.Uuid
-  teacher_id              String                    @db.Uuid
-  meeting_url             String
-  scheduled_start         DateTime
-  scheduled_end           DateTime
-  status                  LiveClassStatus           @default(UPCOMING)
-  recording_url           String?
-  created_at              DateTime                  @default(now())
-  updated_at              DateTime
-  live_chat_messages      live_chat_messages[]
-  live_class_participants live_class_participants[]
-  subjects                subjects                  @relation(fields: [subject_id], references: [id], onDelete: Cascade)
-  teachers                teachers                  @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
-}
-
-model notifications {
-  id                 String               @id @db.Uuid
-  title              String
-  body               String
-  type               NotificationType     @default(SYSTEM)
-  data               Json?
-  created_at         DateTime             @default(now())
-  user_notifications user_notifications[]
-}
-
-model payments {
-  id              String         @id @db.Uuid
-  subscription_id String         @db.Uuid
-  amount          Decimal        @db.Decimal(10, 2)
-  currency        String         @default("INR")
-  status          PaymentStatus  @default(PENDING)
-  gateway         PaymentGateway @default(RAZORPAY)
-  transaction_id  String         @unique
-  paid_at         DateTime?
-  created_at      DateTime       @default(now())
-  subscriptions   subscriptions  @relation(fields: [subscription_id], references: [id], onDelete: Cascade)
-}
-
-model performance_reports {
-  id              String   @id @db.Uuid
-  student_id      String   @db.Uuid
-  subject_id      String   @db.Uuid
-  weak_topics     Json?
-  strength_topics Json?
-  recommendations Json?
-  generated_at    DateTime @default(now())
-  students        students @relation(fields: [student_id], references: [id], onDelete: Cascade)
-  subjects        subjects @relation(fields: [subject_id], references: [id], onDelete: Cascade)
-
-  @@unique([student_id, subject_id])
-}
-
-model permissions {
-  id               String             @id @db.Uuid
-  name             String             @unique
-  description      String?
-  created_at       DateTime           @default(now())
-  updated_at       DateTime
-  role_permissions role_permissions[]
-}
-
-model quiz_attempts {
-  id                      String                    @id @db.Uuid
-  student_id              String                    @db.Uuid
-  quiz_id                 String                    @db.Uuid
-  attempt_number          Int
-  score                   Float                     @default(0.0)
-  passed                  Boolean                   @default(false)
-  started_at              DateTime                  @default(now())
-  completed_at            DateTime?
-  duration_seconds        Int?
-  quizzes                 quizzes                   @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
-  students                students                  @relation(fields: [student_id], references: [id], onDelete: Cascade)
-  quiz_question_responses quiz_question_responses[]
-  quiz_results            quiz_results?
-
-  @@unique([student_id, quiz_id, attempt_number])
-}
-
-model quiz_options {
-  id                      String                    @id @db.Uuid
-  question_id             String                    @db.Uuid
-  option_text             String
-  is_correct              Boolean                   @default(false)
-  sort_order              Int
-  quiz_questions          quiz_questions            @relation(fields: [question_id], references: [id], onDelete: Cascade)
-  quiz_question_responses quiz_question_responses[]
-
-  @@unique([question_id, sort_order])
-}
-
-model quiz_question_responses {
-  id                 String         @id @db.Uuid
-  attempt_id         String         @db.Uuid
-  question_id        String         @db.Uuid
-  selected_option_id String?        @db.Uuid
-  text_response      String?
-  is_correct         Boolean        @default(false)
-  marks_awarded      Float          @default(0.0)
-  quiz_attempts      quiz_attempts  @relation(fields: [attempt_id], references: [id], onDelete: Cascade)
-  quiz_questions     quiz_questions @relation(fields: [question_id], references: [id], onDelete: Cascade)
-  quiz_options       quiz_options?  @relation(fields: [selected_option_id], references: [id])
-
-  @@unique([attempt_id, question_id])
-}
-
-model quiz_questions {
-  id                      String                    @id @db.Uuid
-  quiz_id                 String                    @db.Uuid
-  question_text           String
-  question_type           QuestionType              @default(MCQ)
-  marks                   Float                     @default(1.0)
-  sort_order              Int
-  created_at              DateTime                  @default(now())
-  quiz_options            quiz_options[]
-  quiz_question_responses quiz_question_responses[]
-  quizzes                 quizzes                   @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
-
-  @@unique([quiz_id, sort_order])
-}
-
-model quiz_results {
-  id            String        @id @db.Uuid
-  attempt_id    String        @unique @db.Uuid
-  student_id    String        @db.Uuid
-  quiz_id       String        @db.Uuid
-  score         Float
-  percentage    Float
-  passed        Boolean
-  feedback      String?
-  created_at    DateTime      @default(now())
-  quiz_attempts quiz_attempts @relation(fields: [attempt_id], references: [id], onDelete: Cascade)
-  quizzes       quizzes       @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
-  students      students      @relation(fields: [student_id], references: [id], onDelete: Cascade)
-
-  @@index([student_id, quiz_id])
-}
-
-model quizzes {
-  id                 String           @id @db.Uuid
-  title              String
-  description        String?
-  topic_id           String           @db.Uuid
-  passing_score      Float            @default(40.0)
-  max_attempts       Int              @default(3)
-  time_limit_minutes Int              @default(30)
-  created_at         DateTime         @default(now())
-  updated_at         DateTime
-  quiz_attempts      quiz_attempts[]
-  quiz_questions     quiz_questions[]
-  quiz_results       quiz_results[]
-  topics             topics           @relation(fields: [topic_id], references: [id], onDelete: Cascade)
-}
-
-model role_permissions {
-  role_id       String      @db.Uuid
-  permission_id String      @db.Uuid
-  created_at    DateTime    @default(now())
-  permissions   permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade)
-  roles         roles       @relation(fields: [role_id], references: [id], onDelete: Cascade)
-
-  @@id([role_id, permission_id])
-}
-
-model roles {
-  id               String             @id @db.Uuid
-  name             String             @unique
-  description      String?
-  created_at       DateTime           @default(now())
-  updated_at       DateTime
-  role_permissions role_permissions[]
-  user_roles       user_roles[]
-}
-
-model student_analytics {
-  id                       String   @id @db.Uuid
-  student_id               String   @unique @db.Uuid
-  total_study_time_minutes Int      @default(0)
-  average_quiz_score       Float    @default(0.0)
-  overall_completion_rate  Float    @default(0.0)
-  xp                       Int      @default(0)
-  last_sync_at             DateTime @default(now())
-  students                 students @relation(fields: [student_id], references: [id], onDelete: Cascade)
-}
-
-model student_chapter_progress {
-  id                   String    @id @db.Uuid
-  student_id           String    @db.Uuid
-  chapter_id           String    @db.Uuid
-  is_completed         Boolean   @default(false)
-  completed_percentage Float     @default(0.0)
-  unlocked             Boolean   @default(false)
-  completed_at         DateTime?
-  chapters             chapters  @relation(fields: [chapter_id], references: [id], onDelete: Cascade)
-  students             students  @relation(fields: [student_id], references: [id], onDelete: Cascade)
-
-  @@unique([student_id, chapter_id])
-  @@index([student_id, is_completed])
-}
-
-model student_subject_progress {
-  id                   String    @id @db.Uuid
-  student_id           String    @db.Uuid
-  subject_id           String    @db.Uuid
-  is_completed         Boolean   @default(false)
-  completed_percentage Float     @default(0.0)
-  unlocked             Boolean   @default(false)
-  completed_at         DateTime?
-  students             students  @relation(fields: [student_id], references: [id], onDelete: Cascade)
-  subjects             subjects  @relation(fields: [subject_id], references: [id], onDelete: Cascade)
-
-  @@unique([student_id, subject_id])
-  @@index([student_id, is_completed])
-}
-
-model student_topic_progress {
-  id                   String    @id @db.Uuid
-  student_id           String    @db.Uuid
-  topic_id             String    @db.Uuid
-  is_completed         Boolean   @default(false)
-  watch_percent        Float     @default(0.0)
-  quiz_completed       Boolean   @default(false)
-  assignment_completed Boolean   @default(false)
-  notes_viewed         Boolean   @default(false)
-  unlocked             Boolean   @default(false)
-  completed_at         DateTime?
-  last_activity_at     DateTime  @default(now())
-  students             students  @relation(fields: [student_id], references: [id], onDelete: Cascade)
-  topics               topics    @relation(fields: [topic_id], references: [id], onDelete: Cascade)
-
-  @@unique([student_id, topic_id])
-  @@index([student_id, is_completed])
-}
-
-model students {
-  id                       String                     @id @db.Uuid
-  class_id                 String                     @db.Uuid
-  board_id                 String                     @db.Uuid
-  enrolled_at              DateTime                   @default(now())
-  updated_at               DateTime
-  assignment_submissions   assignment_submissions[]
-  learning_streaks         learning_streaks?
-  live_class_participants  live_class_participants[]
-  performance_reports      performance_reports[]
-  quiz_attempts            quiz_attempts[]
-  quiz_results             quiz_results[]
-  student_analytics        student_analytics?
-  student_chapter_progress student_chapter_progress[]
-  student_subject_progress student_subject_progress[]
-  student_topic_progress   student_topic_progress[]
-  boards                   boards                     @relation(fields: [board_id], references: [id])
-  classes                  classes                    @relation(fields: [class_id], references: [id])
-  users                    users                      @relation(fields: [id], references: [id], onDelete: Cascade)
-  subject_statistics       subject_statistics[]
-  subscriptions            subscriptions[]
-  video_watch_history      video_watch_history[]
-}
-
-model subject_statistics {
-  id               String   @id @db.Uuid
-  student_id       String   @db.Uuid
-  subject_id       String   @db.Uuid
-  topics_completed Int      @default(0)
-  total_topics     Int      @default(0)
-  quizzes_taken    Int      @default(0)
-  quizzes_passed   Int      @default(0)
-  average_score    Float    @default(0.0)
-  updated_at       DateTime
-  students         students @relation(fields: [student_id], references: [id], onDelete: Cascade)
-  subjects         subjects @relation(fields: [subject_id], references: [id], onDelete: Cascade)
-
-  @@unique([student_id, subject_id])
-}
-
-model subjects {
-  id                       String                     @id @db.Uuid
-  name                     String
-  code                     String
-  sort_order               Int
-  class_id                 String                     @db.Uuid
-  created_at               DateTime                   @default(now())
-  updated_at               DateTime
-  courses                  courses[]
-  live_classes             live_classes[]
-  performance_reports      performance_reports[]
-  student_subject_progress student_subject_progress[]
-  subject_statistics       subject_statistics[]
-  classes                  classes                    @relation(fields: [class_id], references: [id], onDelete: Cascade)
-  units                    units[]
-
-  @@unique([class_id, code])
-  @@unique([class_id, name])
-}
-
-model subscription_plans {
-  id             String          @id @db.Uuid
-  name           String          @unique
-  description    String?
-  price          Decimal         @db.Decimal(10, 2)
-  duration_days  Int
-  billing_period BillingPeriod   @default(MONTHLY)
-  is_active      Boolean         @default(true)
-  created_at     DateTime        @default(now())
-  updated_at     DateTime
-  subscriptions  subscriptions[]
-}
-
-model subscriptions {
-  id                 String             @id @db.Uuid
-  student_id         String             @db.Uuid
-  plan_id            String             @db.Uuid
-  status             SubscriptionStatus @default(PENDING)
-  start_date         DateTime
-  end_date           DateTime
-  next_billing_date  DateTime?
-  created_at         DateTime           @default(now())
-  updated_at         DateTime
-  payments           payments[]
-  subscription_plans subscription_plans @relation(fields: [plan_id], references: [id])
-  students           students           @relation(fields: [student_id], references: [id], onDelete: Cascade)
-
-  @@index([student_id, status])
-}
-
-model teachers {
-  id                   String                 @id @db.Uuid
-  bio                  String?
-  qualification        String?
-  created_at           DateTime               @default(now())
-  updated_at           DateTime
-  assignment_feedbacks assignment_feedbacks[]
-  courses              courses[]
-  live_classes         live_classes[]
-  users                users                  @relation(fields: [id], references: [id], onDelete: Cascade)
-}
-
-model topics {
-  id                     String                   @id @db.Uuid
-  name                   String
-  sort_order             Int
-  chapter_id             String                   @db.Uuid
-  prerequisite_topic_id  String?                  @db.Uuid
-  require_watch_percent  Float                    @default(90.0)
-  require_quiz_pass      Boolean                  @default(true)
-  require_assign_submit  Boolean                  @default(false)
-  require_notes_viewed   Boolean                  @default(false)
-  created_at             DateTime                 @default(now())
-  updated_at             DateTime
-  assignments            assignments[]
-  course_notes           course_notes[]
-  course_resources       course_resources[]
-  course_videos          course_videos[]
-  quizzes                quizzes[]
-  student_topic_progress student_topic_progress[]
-  chapters               chapters                 @relation(fields: [chapter_id], references: [id], onDelete: Cascade)
-  topics                 topics?                  @relation("topicsTotopics", fields: [prerequisite_topic_id], references: [id])
-  other_topics           topics[]                 @relation("topicsTotopics")
-
-  @@unique([chapter_id, name])
-}
-
-model units {
-  id         String     @id @db.Uuid
-  name       String
-  sort_order Int
-  subject_id String     @db.Uuid
-  created_at DateTime   @default(now())
-  updated_at DateTime
-  chapters   chapters[]
-  subjects   subjects   @relation(fields: [subject_id], references: [id], onDelete: Cascade)
-
-  @@unique([subject_id, name])
-}
-
-model user_notifications {
-  id              String        @id @db.Uuid
-  user_id         String        @db.Uuid
-  notification_id String        @db.Uuid
-  is_read         Boolean       @default(false)
-  read_at         DateTime?
-  notifications   notifications @relation(fields: [notification_id], references: [id], onDelete: Cascade)
-  users           users         @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@unique([user_id, notification_id])
-  @@index([user_id, is_read])
-}
-
-model user_roles {
-  user_id     String   @db.Uuid
-  role_id     String   @db.Uuid
-  assigned_at DateTime @default(now())
-  roles       roles    @relation(fields: [role_id], references: [id], onDelete: Cascade)
-  users       users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@id([user_id, role_id])
-}
-
-model users {
-  id                 String               @id @db.Uuid
-  email              String               @unique
-  password_hash      String
-  first_name         String
-  last_name          String
-  phone_number       String?
-  role               UserRole             @default(STUDENT)
-  created_at         DateTime             @default(now())
-  updated_at         DateTime
-  location           String?
-  admins             admins?
-  live_chat_messages live_chat_messages[]
-  students           students?
-  teachers           teachers?
-  user_notifications user_notifications[]
-  user_roles         user_roles[]
-}
-
-model video_watch_history {
-  id                String        @id @db.Uuid
-  student_id        String        @db.Uuid
-  video_id          String        @db.Uuid
-  watch_duration    Int
-  completed_percent Float
-  resume_timestamp  Int           @default(0)
-  playback_history  Json?
-  last_watched_at   DateTime
-  students          students      @relation(fields: [student_id], references: [id], onDelete: Cascade)
-  course_videos     course_videos @relation(fields: [video_id], references: [id], onDelete: Cascade)
-
-  @@unique([student_id, video_id])
-  @@index([student_id, video_id])
-}
-
-enum AttendanceStatus {
-  PRESENT
-  ABSENT
-}
-
-enum BillingPeriod {
-  MONTHLY
-  QUARTERLY
-  ANNUALLY
-}
-
-enum LiveClassStatus {
-  UPCOMING
-  LIVE
-  COMPLETED
-  CANCELLED
-}
-
-enum NotificationType {
-  ACADEMIC
-  SUBSCRIPTION
-  SYSTEM
-  LIVE_CLASS
-}
-
-enum PaymentGateway {
-  RAZORPAY
-  STRIPE
-}
-
-enum PaymentStatus {
-  SUCCESS
-  FAILED
-  PENDING
+// ==========================================
+// ENUMS
+// ==========================================
+
+enum UserRole {
+  ADMIN
+  TEACHER
+  STUDENT
 }
 
 enum QuestionType {
@@ -680,10 +24,29 @@ enum QuestionType {
   COMPREHENSION
 }
 
-enum SubmissionStatus {
-  SUBMITTED
-  GRADED
-  REJECTED
+enum LiveClassStatus {
+  UPCOMING
+  LIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+}
+
+enum NotificationType {
+  ACADEMIC
+  SUBSCRIPTION
+  SYSTEM
+  LIVE_CLASS
+}
+
+enum BillingPeriod {
+  MONTHLY
+  QUARTERLY
+  ANNUALLY
 }
 
 enum SubscriptionStatus {
@@ -693,8 +56,791 @@ enum SubscriptionStatus {
   PENDING
 }
 
-enum UserRole {
-  ADMIN
-  TEACHER
-  STUDENT
+enum PaymentStatus {
+  SUCCESS
+  FAILED
+  PENDING
+}
+
+enum PaymentGateway {
+  RAZORPAY
+  STRIPE
+}
+
+enum SubmissionStatus {
+  SUBMITTED
+  GRADED
+  REJECTED
+}
+
+// ==========================================
+// DYNAMIC ACADEMIC HIERARCHY
+// ==========================================
+
+model Board {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique
+  code      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  classes  Class[]
+  students Student[]
+  courses  Course[]
+
+  @@map("boards")
+}
+
+model Class {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  sortOrder Int      @map("sort_order")
+  boardId   String   @map("board_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  board    Board     @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  subjects Subject[]
+  students Student[]
+  courses  Course[]
+
+  @@unique([boardId, name])
+  @@map("classes")
+}
+
+model Subject {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  code      String
+  sortOrder Int      @map("sort_order")
+  classId   String   @map("class_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  class              Class                    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  units              Unit[]
+  courses            Course[]
+  liveClasses        LiveClass[]
+  studentProgress    StudentSubjectProgress[]
+  performanceReports PerformanceReport[]
+  subjectStatistics  SubjectStatistics[]
+
+  @@unique([classId, name])
+  @@unique([classId, code])
+  @@map("subjects")
+}
+
+model Unit {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  sortOrder Int      @map("sort_order")
+  subjectId String   @map("subject_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  subject  Subject   @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  chapters Chapter[]
+
+  @@unique([subjectId, name])
+  @@map("units")
+}
+
+model Chapter {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  sortOrder Int      @map("sort_order")
+  unitId    String   @map("unit_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  unit            Unit                     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  topics          Topic[]
+  studentProgress StudentChapterProgress[]
+
+  @@unique([unitId, name])
+  @@map("chapters")
+}
+
+model Topic {
+  id                   String   @id @default(uuid()) @db.Uuid
+  name                 String
+  sortOrder            Int      @map("sort_order")
+  chapterId            String   @map("chapter_id") @db.Uuid
+  prerequisiteTopicId  String?  @map("prerequisite_topic_id") @db.Uuid
+  requireWatchPercent  Float    @default(90.0) @map("require_watch_percent")
+  requireQuizPass      Boolean  @default(true) @map("require_quiz_pass")
+  requireAssignSubmit  Boolean  @default(false) @map("require_assign_submit")
+  requireNotesViewed   Boolean  @default(false) @map("require_notes_viewed")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  chapter           Chapter                 @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  prerequisiteTopic Topic?                  @relation("TopicPrerequisites", fields: [prerequisiteTopicId], references: [id], onDelete: SetNull)
+  dependentTopics   Topic[]                 @relation("TopicPrerequisites")
+  videos            CourseVideo[]
+  notes             CourseNote[]
+  resources         CourseResource[]
+  studentProgress   StudentTopicProgress[]
+  quizzes           Quiz[]
+  assignments       Assignment[]
+
+  @@unique([chapterId, name])
+  @@map("topics")
+}
+
+// ==========================================
+// USER MANAGEMENT & RBAC SYSTEM
+// ==========================================
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  firstName    String    @map("first_name")
+  lastName     String    @map("last_name")
+  phoneNumber  String?   @map("phone_number")
+  location     String?   @map("location")
+  role         UserRole  @default(STUDENT)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  adminProfile     Admin?
+  teacherProfile   Teacher?
+  studentProfile   Student?
+  userRoles        UserRoleJoin[]
+  chatMessages     LiveChatMessage[]
+  userNotifications UserNotification[]
+
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  rolePermissions RolePermission[]
+  userRoles       UserRoleJoin[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique // e.g., "course:create", "video:view"
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String   @map("role_id") @db.Uuid
+  permissionId String   @map("permission_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserRoleJoin {
+  userId    String   @map("user_id") @db.Uuid
+  roleId    String   @map("role_id") @db.Uuid
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model Admin {
+  id     String @id @db.Uuid
+  user   User   @relation(fields: [id], references: [id], onDelete: Cascade)
+  dept   String @default("Operations")
+
+  @@map("admins")
+}
+
+model Teacher {
+  id            String   @id @db.Uuid
+  user          User     @relation(fields: [id], references: [id], onDelete: Cascade)
+  bio           String?
+  qualification String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  courses             Course[]
+  liveClasses         LiveClass[]
+  assignmentFeedbacks AssignmentFeedback[]
+
+  @@map("teachers")
+}
+
+model Student {
+  id             String   @id @db.Uuid
+  user           User     @relation(fields: [id], references: [id], onDelete: Cascade)
+  classId        String   @map("class_id") @db.Uuid
+  boardId        String   @map("board_id") @db.Uuid
+  enrolledAt     DateTime @default(now()) @map("enrolled_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  class                 Class                    @relation(fields: [classId], references: [id], onDelete: Restrict)
+  board                 Board                    @relation(fields: [boardId], references: [id], onDelete: Restrict)
+  topicProgress         StudentTopicProgress[]
+  chapterProgress       StudentChapterProgress[]
+  subjectProgress       StudentSubjectProgress[]
+  videoHistory          VideoWatchHistory[]
+  quizAttempts          QuizAttempt[]
+  quizResults           QuizResult[]
+  submissions           AssignmentSubmission[]
+  liveClassParticipants LiveClassParticipant[]
+  subscriptions         Subscription[]
+  analytics             StudentAnalytics?
+  performanceReports    PerformanceReport[]
+  learningStreak        LearningStreak?
+  subjectStatistics     SubjectStatistics[]
+
+  @@map("students")
+}
+
+// ==========================================
+// COURSE MANAGEMENT SYSTEM
+// ==========================================
+
+model Course {
+  id          String   @id @default(uuid()) @db.Uuid
+  title       String
+  description String
+  thumbnailUrl String?  @map("thumbnail_url")
+  subjectId   String   @map("subject_id") @db.Uuid
+  classId     String   @map("class_id") @db.Uuid
+  boardId     String   @map("board_id") @db.Uuid
+  teacherId   String   @map("teacher_id") @db.Uuid
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  board   Board   @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@map("courses")
+}
+
+model CourseVideo {
+  id           String   @id @default(uuid()) @db.Uuid
+  title        String
+  videoUrl     String   @map("video_url")
+  thumbnailUrl String?  @map("thumbnail_url")
+  duration     Int      @map("duration") // in seconds
+  drmMetadata  Json?    @map("drm_metadata") // encrypted stream tokens, key IDs, etc.
+  drmEnabled    Boolean? @default(false) @map("drm_enabled")
+  encryptedPath String?  @map("encrypted_path")
+  hlsPath       String?  @map("hls_path")
+  dashPath      String?  @map("dash_path")
+  licenseId     String?  @map("license_id")
+  topicId      String   @map("topic_id") @db.Uuid
+  sortOrder    Int      @map("sort_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  topic        Topic               @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  watchHistory VideoWatchHistory[]
+
+  @@unique([topicId, sortOrder])
+  @@map("course_videos")
+}
+
+model CourseNote {
+  id                    String   @id @default(uuid()) @db.Uuid
+  title                 String
+  fileUrl               String   @map("file_url")
+  topicId               String   @map("topic_id") @db.Uuid
+  sortOrder             Int      @map("sort_order")
+  isRequiredForComplete Boolean  @default(true) @map("is_required_for_complete")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+  subjectTitle          String?  @map("subject_title")
+  uploadedByName        String?  @map("uploaded_by_name")
+  uploadedByUserId      String?  @map("uploaded_by_user_id")
+
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([topicId, sortOrder])
+  @@map("course_notes")
+}
+
+model CourseResource {
+  id        String   @id @default(uuid()) @db.Uuid
+  title     String
+  fileUrl   String   @map("file_url")
+  fileType  String   @map("file_type") // e.g. "PDF", "ZIP"
+  topicId   String   @map("topic_id") @db.Uuid
+  sortOrder Int      @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([topicId, sortOrder])
+  @@map("course_resources")
+}
+
+// ==========================================
+// UNLOCK PROGRESSION LOGIC & VIDEO TRACKING
+// ==========================================
+
+model StudentTopicProgress {
+  id                  String    @id @default(uuid()) @db.Uuid
+  studentId           String    @map("student_id") @db.Uuid
+  topicId             String    @map("topic_id") @db.Uuid
+  isCompleted         Boolean   @default(false) @map("is_completed")
+  watchPercent        Float     @default(0.0) @map("watch_percent")
+  quizCompleted       Boolean   @default(false) @map("quiz_completed")
+  assignmentCompleted Boolean   @default(false) @map("assignment_completed")
+  notesViewed         Boolean   @default(false) @map("notes_viewed")
+  unlocked            Boolean   @default(false)
+  completedAt         DateTime? @map("completed_at")
+  lastActivityAt      DateTime  @default(now()) @map("last_activity_at")
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  topic   Topic   @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, topicId])
+  @@index([studentId, isCompleted])
+  @@map("student_topic_progress")
+}
+
+model StudentChapterProgress {
+  id                  String    @id @default(uuid()) @db.Uuid
+  studentId           String    @map("student_id") @db.Uuid
+  chapterId           String    @map("chapter_id") @db.Uuid
+  isCompleted         Boolean   @default(false) @map("is_completed")
+  completedPercentage Float     @default(0.0) @map("completed_percentage")
+  unlocked            Boolean   @default(false)
+  completedAt         DateTime? @map("completed_at")
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, chapterId])
+  @@index([studentId, isCompleted])
+  @@map("student_chapter_progress")
+}
+
+model StudentSubjectProgress {
+  id                  String    @id @default(uuid()) @db.Uuid
+  studentId           String    @map("student_id") @db.Uuid
+  subjectId           String    @map("subject_id") @db.Uuid
+  isCompleted         Boolean   @default(false) @map("is_completed")
+  completedPercentage Float     @default(0.0) @map("completed_percentage")
+  unlocked            Boolean   @default(false)
+  completedAt         DateTime? @map("completed_at")
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, subjectId])
+  @@index([studentId, isCompleted])
+  @@map("student_subject_progress")
+}
+
+model VideoWatchHistory {
+  id               String   @id @default(uuid()) @db.Uuid
+  studentId        String   @map("student_id") @db.Uuid
+  videoId          String   @map("video_id") @db.Uuid
+  watchDuration    Int      @map("watch_duration") // total seconds watched
+  completedPercent Float    @map("completed_percent") // percentage of video watched
+  resumeTimestamp  Int      @default(0) @map("resume_timestamp") // in seconds
+  playbackHistory  Json?    @map("playback_history") // intervals like [[0, 45], [60, 95]]
+  lastWatchedAt    DateTime @updatedAt @map("last_watched_at")
+
+  student Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  video   CourseVideo @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, videoId])
+  @@index([studentId, videoId])
+  @@map("video_watch_history")
+}
+
+// ==========================================
+// QUIZ ENGINE
+// ==========================================
+
+model Quiz {
+  id                String   @id @default(uuid()) @db.Uuid
+  title             String
+  description       String?
+  topicId           String   @map("topic_id") @db.Uuid
+  passingScore      Float    @default(40.0) @map("passing_score") // e.g. percent or raw marks
+  maxAttempts       Int      @default(3) @map("max_attempts")
+  timeLimitMinutes  Int      @default(30) @map("time_limit_minutes")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  topic        Topic                 @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  questions    QuizQuestion[]
+  attempts     QuizAttempt[]
+  quizResults  QuizResult[]
+
+  @@map("quizzes")
+}
+
+model QuizQuestion {
+  id           String       @id @default(uuid()) @db.Uuid
+  quizId       String       @map("quiz_id") @db.Uuid
+  questionText String       @map("question_text")
+  questionType QuestionType @default(MCQ) @map("question_type")
+  marks        Float        @default(1.0)
+  sortOrder    Int          @map("sort_order")
+  createdAt    DateTime     @default(now()) @map("created_at")
+
+  quiz              Quiz                   @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  options           QuizOption[]
+  questionResponses QuizQuestionResponse[]
+
+  @@unique([quizId, sortOrder])
+  @@map("quiz_questions")
+}
+
+model QuizOption {
+  id         String   @id @default(uuid()) @db.Uuid
+  questionId String   @map("question_id") @db.Uuid
+  optionText String   @map("option_text")
+  isCorrect  Boolean  @default(false) @map("is_correct")
+  sortOrder  Int      @map("sort_order")
+
+  question          QuizQuestion           @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionResponses QuizQuestionResponse[]
+
+  @@unique([questionId, sortOrder])
+  @@map("quiz_options")
+}
+
+model QuizAttempt {
+  id              String    @id @default(uuid()) @db.Uuid
+  studentId       String    @map("student_id") @db.Uuid
+  quizId          String    @map("quiz_id") @db.Uuid
+  attemptNumber   Int       @map("attempt_number")
+  score           Float     @default(0.0)
+  passed          Boolean   @default(false)
+  startedAt       DateTime  @default(now()) @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+  durationSeconds Int?      @map("duration_seconds")
+
+  student           Student                @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  quiz              Quiz                   @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  questionResponses QuizQuestionResponse[]
+  result            QuizResult?
+
+  @@unique([studentId, quizId, attemptNumber])
+  @@map("quiz_attempts")
+}
+
+model QuizQuestionResponse {
+  id               String   @id @default(uuid()) @db.Uuid
+  attemptId        String   @map("attempt_id") @db.Uuid
+  questionId       String   @map("question_id") @db.Uuid
+  selectedOptionId String?  @map("selected_option_id") @db.Uuid
+  textResponse     String?  @map("text_response") // for non-option subjective/fill-in-the-blank
+  isCorrect        Boolean  @default(false) @map("is_correct")
+  marksAwarded     Float    @default(0.0) @map("marks_awarded")
+
+  attempt        QuizAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question       QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedOption QuizOption?  @relation(fields: [selectedOptionId], references: [id], onDelete: SetNull)
+
+  @@unique([attemptId, questionId])
+  @@map("quiz_question_responses")
+}
+
+model QuizResult {
+  id          String   @id @default(uuid()) @db.Uuid
+  attemptId   String   @unique @map("attempt_id") @db.Uuid
+  studentId   String   @map("student_id") @db.Uuid
+  quizId      String   @map("quiz_id") @db.Uuid
+  score       Float
+  percentage  Float
+  passed      Boolean
+  feedback    String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  attempt QuizAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  student Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  quiz    Quiz        @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, quizId])
+  @@map("quiz_results")
+}
+
+// ==========================================
+// ASSIGNMENT MODULE
+// ==========================================
+
+model Assignment {
+  id           String    @id @default(uuid()) @db.Uuid
+  title        String
+  description  String
+  fileUrl      String?   @map("file_url")
+  topicId      String    @map("topic_id") @db.Uuid
+  maxMarks     Float     @default(100.0) @map("max_marks")
+  passingMarks Float     @default(40.0) @map("passing_marks")
+  deadline     DateTime?
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  topic       Topic                  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  submissions AssignmentSubmission[]
+
+  @@map("assignments")
+}
+
+model AssignmentSubmission {
+  id            String           @id @default(uuid()) @db.Uuid
+  assignmentId  String           @map("assignment_id") @db.Uuid
+  studentId     String           @map("student_id") @db.Uuid
+  submissionUrl String           @map("submission_url")
+  status        SubmissionStatus @default(SUBMITTED)
+  submittedAt   DateTime         @default(now()) @map("submitted_at")
+
+  assignment Assignment          @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student    Student             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  feedback   AssignmentFeedback?
+
+  @@unique([studentId, assignmentId])
+  @@map("assignment_submissions")
+}
+
+model AssignmentFeedback {
+  id            String   @id @default(uuid()) @db.Uuid
+  submissionId  String   @unique @map("submission_id") @db.Uuid
+  teacherId     String   @map("teacher_id") @db.Uuid
+  marksObtained Float    @map("marks_obtained")
+  passed        Boolean
+  comment       String?
+  gradedAt      DateTime @default(now()) @map("graded_at")
+
+  submission AssignmentSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  teacher    Teacher              @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@map("assignment_feedbacks")
+}
+
+// ==========================================
+// LIVE CLASSROOMS
+// ==========================================
+
+model LiveClass {
+  id             String          @id @default(uuid()) @db.Uuid
+  title          String
+  description    String?
+  subjectId      String          @map("subject_id") @db.Uuid
+  teacherId      String          @map("teacher_id") @db.Uuid
+  meetingUrl     String          @map("meeting_url")
+  scheduledStart DateTime        @map("scheduled_start")
+  scheduledEnd   DateTime        @map("scheduled_end")
+  status         LiveClassStatus @default(UPCOMING)
+  recordingUrl   String?         @map("recording_url")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  subject      Subject                @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacher      Teacher                @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  participants LiveClassParticipant[]
+  chatMessages LiveChatMessage[]
+
+  @@map("live_classes")
+}
+
+model LiveClassParticipant {
+  id                    String           @id @default(uuid()) @db.Uuid
+  liveClassId           String           @map("live_class_id") @db.Uuid
+  studentId             String           @map("student_id") @db.Uuid
+  joinedAt              DateTime         @default(now()) @map("joined_at")
+  leftAt                DateTime?        @map("left_at")
+  totalDurationMinutes  Int?             @map("total_duration_minutes")
+  attendanceStatus      AttendanceStatus @default(PRESENT) @map("attendance_status")
+
+  liveClass LiveClass @relation(fields: [liveClassId], references: [id], onDelete: Cascade)
+  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([liveClassId, studentId])
+  @@map("live_class_participants")
+}
+
+model LiveChatMessage {
+  id          String   @id @default(uuid()) @db.Uuid
+  liveClassId String   @map("live_class_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  message     String
+  sentAt      DateTime @default(now()) @map("sent_at")
+
+  liveClass LiveClass @relation(fields: [liveClassId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([liveClassId, sentAt])
+  @@map("live_chat_messages")
+}
+
+// ==========================================
+// NOTIFICATION SYSTEM
+// ==========================================
+
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  title     String
+  body      String
+  type      NotificationType @default(SYSTEM)
+  data      Json? // Additional metadata for deep-linking (e.g. subject_id, quiz_id)
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  userNotifications UserNotification[]
+
+  @@map("notifications")
+}
+
+model UserNotification {
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  notificationId String    @map("notification_id") @db.Uuid
+  isRead         Boolean   @default(false) @map("is_read")
+  readAt         DateTime? @map("read_at")
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, notificationId])
+  @@index([userId, isRead])
+  @@map("user_notifications")
+}
+
+// ==========================================
+// SUBSCRIPTION & PAYMENTS
+// ==========================================
+
+model SubscriptionPlan {
+  id           String        @id @default(uuid()) @db.Uuid
+  name         String        @unique
+  description  String?
+  price        Decimal       @db.Decimal(10, 2)
+  durationDays Int           @map("duration_days")
+  billingPeriod BillingPeriod @default(MONTHLY) @map("billing_period")
+  isActive     Boolean       @default(true) @map("is_active")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  subscriptions Subscription[]
+
+  @@map("subscription_plans")
+}
+
+model Subscription {
+  id              String             @id @default(uuid()) @db.Uuid
+  studentId       String             @map("student_id") @db.Uuid
+  planId          String             @map("plan_id") @db.Uuid
+  status          SubscriptionStatus @default(PENDING)
+  startDate       DateTime           @map("start_date")
+  endDate         DateTime           @map("end_date")
+  nextBillingDate DateTime?          @map("next_billing_date")
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  student Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  plan    SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Restrict)
+  payments Payment[]
+
+  @@index([studentId, status])
+  @@map("subscriptions")
+}
+
+model Payment {
+  id             String         @id @default(uuid()) @db.Uuid
+  subscriptionId String         @map("subscription_id") @db.Uuid
+  amount         Decimal        @db.Decimal(10, 2)
+  currency       String         @default("INR")
+  status         PaymentStatus  @default(PENDING)
+  gateway        PaymentGateway @default(RAZORPAY)
+  transactionId  String         @unique @map("transaction_id")
+  paidAt         DateTime?      @map("paid_at")
+  createdAt      DateTime       @default(now()) @map("created_at")
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+// ==========================================
+// ANALYTICS & GAMIFICATION
+// ==========================================
+
+model StudentAnalytics {
+  id                    String   @id @default(uuid()) @db.Uuid
+  studentId             String   @unique @map("student_id") @db.Uuid
+  totalStudyTimeMinutes Int      @default(0) @map("total_study_time_minutes")
+  averageQuizScore      Float    @default(0.0) @map("average_quiz_score")
+  overallCompletionRate Float    @default(0.0) @map("overall_completion_rate")
+  xp                    Int      @default(0) // Experience points for gamification
+  lastSyncAt            DateTime @default(now()) @map("last_sync_at")
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("student_analytics")
+}
+
+model PerformanceReport {
+  id              String   @id @default(uuid()) @db.Uuid
+  studentId       String   @map("student_id") @db.Uuid
+  subjectId       String   @map("subject_id") @db.Uuid
+  weakTopics      Json?    @map("weak_topics") // Array of topic IDs/names with scoring data
+  strengthTopics  Json?    @map("strength_topics") // Array of strong topics
+  recommendations Json?    // Custom generated recommendations
+  generatedAt     DateTime @default(now()) @map("generated_at")
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, subjectId])
+  @@map("performance_reports")
+}
+
+model LearningStreak {
+  id               String    @id @default(uuid()) @db.Uuid
+  studentId        String    @unique @map("student_id") @db.Uuid
+  currentStreak    Int       @default(0) @map("current_streak")
+  longestStreak    Int       @default(0) @map("longest_streak")
+  lastActivityDate DateTime? @map("last_activity_date")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("learning_streaks")
+}
+
+model SubjectStatistics {
+  id               String   @id @default(uuid()) @db.Uuid
+  studentId        String   @map("student_id") @db.Uuid
+  subjectId        String   @map("subject_id") @db.Uuid
+  topicsCompleted  Int      @default(0) @map("topics_completed")
+  totalTopics      Int      @default(0) @map("total_topics")
+  quizzesTaken     Int      @default(0) @map("quizzes_taken")
+  quizzesPassed    Int      @default(0) @map("quizzes_passed")
+  averageScore     Float    @default(0.0) @map("average_score")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, subjectId])
+  @@map("subject_statistics")
 }

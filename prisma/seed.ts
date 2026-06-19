@@ -364,7 +364,6 @@ async function main() {
       lastName: 'Sharma',
       role: UserRole.ADMIN,
       phoneNumber: '9876543210',
-      isActive: true,
     },
   });
 
